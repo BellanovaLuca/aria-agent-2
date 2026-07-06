@@ -127,6 +127,17 @@ export function IcChat({ size = 15 }: { size?: number }) {
   )
 }
 
+export function IcHeadset({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M4 11v-1a6 6 0 0112 0v1"/>
+      <rect x="2.5" y="11" width="3.5" height="5" rx="1.2"/>
+      <rect x="14" y="11" width="3.5" height="5" rx="1.2"/>
+      <path d="M16 16v.5a2.5 2.5 0 01-2.5 2.5H10"/>
+    </svg>
+  )
+}
+
 export function IcSend({ size = 16 }: { size?: number }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>

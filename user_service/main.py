@@ -13,6 +13,8 @@ Endpoints:
   DELETE /users/{username}          — elimina utente
   POST   /reset-password            — esegue reset, genera password temporanea
   POST   /unlock-account            — sblocca utenza previa verifica identità
+  GET    /rooms                     — elenca le chiamate live attive (LiveKit)
+  GET    /operator-token            — JWT per far entrare un operatore in una room
   GET    /reset-history             — cronologia completa di tutte le operazioni
   GET    /reset-history/{username}  — cronologia reset per singolo utente
   DELETE /reset-history             — azzera la cronologia (usato dal frontend)
@@ -42,6 +44,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
+from livekit import api as lk_api
 from livekit.api import AccessToken, VideoGrants
 
 # Carica .env dalla root del progetto (funziona sia con run_all.sh che in standalone)
@@ -511,6 +514,88 @@ def get_webrtc_token():
         .to_jwt()
     )
     return {"token": token, "url": _LIVEKIT_URL, "room": room_name}
+
+
+# ── Handoff operatore: chiamate live e ingresso operatore ─────────────────────
+
+def _livekit_http_url() -> str:
+    """URL HTTP(S) del server LiveKit per le API (LIVEKIT_URL è in forma ws/wss)."""
+    return _LIVEKIT_URL.replace("wss://", "https://").replace("ws://", "http://")
+
+
+def _require_livekit() -> None:
+    if not _LIVEKIT_URL or not _LIVEKIT_API_KEY or not _LIVEKIT_API_SECRET:
+        raise HTTPException(status_code=503, detail="LiveKit non configurato nel .env")
+
+
+@app.get("/rooms")
+async def list_live_rooms():
+    """Elenca le chiamate live in corso (room LiveKit di voce/web) con i partecipanti.
+
+    Usato dalla dashboard operatore per vedere le conversazioni attive e prenderle
+    in carico. Considera solo le room con prefisso "call-" (SIP) o "web-" (browser).
+    """
+    _require_livekit()
+    lkapi = lk_api.LiveKitAPI(_livekit_http_url(), _LIVEKIT_API_KEY, _LIVEKIT_API_SECRET)
+    try:
+        rooms_resp = await lkapi.room.list_rooms(lk_api.ListRoomsRequest())
+        result = []
+        for room in rooms_resp.rooms:
+            if not (room.name.startswith("call-") or room.name.startswith("web-")):
+                continue
+            parts_resp = await lkapi.room.list_participants(
+                lk_api.ListParticipantsRequest(room=room.name)
+            )
+            participants = [
+                {
+                    "identity": p.identity,
+                    "name": p.name,
+                    # kind==4 è AGENT nel protocollo LiveKit; getattr per sicurezza
+                    "is_agent": getattr(p, "kind", 0) == 4 or p.identity.lower().startswith("agent"),
+                    "is_operator": p.identity.startswith("operator-"),
+                }
+                for p in parts_resp.participants
+            ]
+            result.append({
+                "name": room.name,
+                "num_participants": room.num_participants,
+                "created_at": datetime.fromtimestamp(room.creation_time, tz=timezone.utc).isoformat()
+                if room.creation_time else None,
+                "participants": participants,
+                "has_operator": any(p["is_operator"] for p in participants),
+            })
+        result.sort(key=lambda r: r["created_at"] or "", reverse=True)
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Elenco room LiveKit fallito")
+        raise HTTPException(status_code=502, detail="Impossibile contattare LiveKit") from exc
+    finally:
+        await lkapi.aclose()
+
+
+@app.get("/operator-token")
+def get_operator_token(room: str = Query(..., min_length=1, max_length=128)):
+    """Genera un JWT per far entrare un operatore umano in una room esistente.
+
+    L'operatore entra nella stessa room del chiamante per prenderne in carico la
+    conversazione (handoff). Identità dedicata "operator-<id>" così l'agente può
+    riconoscerlo e farsi da parte.
+    """
+    _require_livekit()
+    identity = f"operator-{uuid.uuid4().hex[:8]}"
+    token = (
+        AccessToken(_LIVEKIT_API_KEY, _LIVEKIT_API_SECRET)
+        .with_identity(identity)
+        .with_name("Operatore")
+        .with_grants(VideoGrants(
+            room_join=True, room=room,
+            can_publish=True, can_subscribe=True, can_publish_data=True,
+        ))
+        .to_jwt()
+    )
+    return {"token": token, "url": _LIVEKIT_URL, "room": room, "identity": identity}
 
 
 # ── Endpoints trascrizioni (per il frontend React) ────────────────────────────

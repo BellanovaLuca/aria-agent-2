@@ -48,7 +48,22 @@ export interface KnowledgeHit {
   score: number
 }
 
-export type Page = 'dashboard' | 'calls' | 'admin' | 'email' | 'knowledge'
+export interface LiveParticipant {
+  identity: string
+  name: string
+  is_agent: boolean
+  is_operator: boolean
+}
+
+export interface LiveRoom {
+  name: string
+  num_participants: number
+  created_at: string | null
+  participants: LiveParticipant[]
+  has_operator: boolean
+}
+
+export type Page = 'dashboard' | 'calls' | 'live' | 'admin' | 'email' | 'knowledge'
 
 export interface ToastItem {
   id: string

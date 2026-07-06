@@ -13,6 +13,7 @@ const Calls     = lazy(() => import('./pages/Calls').then(m => ({ default: m.Cal
 const Admin     = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })))
 const Email     = lazy(() => import('./pages/Email').then(m => ({ default: m.Email })))
 const Knowledge = lazy(() => import('./pages/Knowledge').then(m => ({ default: m.Knowledge })))
+const LiveCalls = lazy(() => import('./pages/LiveCalls').then(m => ({ default: m.LiveCalls })))
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -73,6 +74,7 @@ export default function App() {
           <div key={page} className="animate-page-enter flex-1" style={{ minHeight: 0 }}>
             {page === 'dashboard' && <Dashboard addToast={addToast} />}
             {page === 'calls'     && <Calls     addToast={addToast} />}
+            {page === 'live'      && <LiveCalls addToast={addToast} />}
             {page === 'admin'     && <Admin     addToast={addToast} onUserCountChange={setUserCount} />}
             {page === 'email'     && <Email     addToast={addToast} />}
             {page === 'knowledge' && <Knowledge addToast={addToast} />}

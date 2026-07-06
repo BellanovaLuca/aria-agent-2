@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { IcDashboard, IcEmailIcon, IcPhone, IcUsers, IcKey, IcBook } from './icons'
+import { IcDashboard, IcEmailIcon, IcPhone, IcUsers, IcKey, IcBook, IcHeadset } from './icons'
 import type { Page } from '../types'
 
 interface Props {
@@ -301,6 +301,9 @@ export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount,
 
         <NavItem page="calls" label="Chiamate" icon={<IcPhone size={15} />}
           isActive={current === 'calls'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
+
+        <NavItem page="live" label="Chiamate Live" icon={<IcHeadset size={15} />}
+          isActive={current === 'live'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
 
         <NavItem page="admin" label="Utenti" icon={<IcUsers size={15} />}
           isActive={current === 'admin'} isCollapsed={isCollapsed} badge={userCount} onNavigate={onNavigate} />

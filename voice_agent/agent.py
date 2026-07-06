@@ -10,6 +10,7 @@ Flusso infrastrutturale:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from datetime import datetime
@@ -180,6 +181,38 @@ async def entrypoint(ctx: JobContext) -> None:
         transcript_file.write(f"\n=== Fine chiamata: {datetime.now().isoformat()} ===\n")
         transcript_file.close()
         log.info("Trascrizione salvata: %s", transcript_path)
+
+    # ── Handoff a operatore umano ─────────────────────────────────────────────
+    # Quando un operatore (identità "operator-…") entra nella room, l'agente
+    # annuncia il passaggio e si fa da parte, lasciando operatore e chiamante a
+    # parlare direttamente. Un flag evita di gestire due volte lo stesso handoff.
+    handoff_done = {"value": False}
+
+    @ctx.room.on("participant_connected")
+    def on_participant_connected(participant: object) -> None:
+        identity = getattr(participant, "identity", "") or ""
+        if not identity.startswith("operator-") or handoff_done["value"]:
+            return
+        handoff_done["value"] = True
+        log.info("Operatore %s entrato: avvio handoff", identity)
+        transcript_file.write(f"\n--- Handoff a operatore ({identity}) ---\n") if not transcript_file.closed else None
+
+        async def _handoff() -> None:
+            try:
+                await session.generate_reply(
+                    instructions=(
+                        "Un operatore umano è appena entrato in linea. Con poche parole "
+                        "avvisa il chiamante che lo passi a un collega del supporto, "
+                        "salutalo cordialmente, poi non aggiungere altro."
+                    )
+                )
+            except Exception as exc:  # l'annuncio è best-effort
+                log.warning("Annuncio di handoff fallito: %s", exc)
+            finally:
+                # L'agente lascia la room: chiamante e operatore restano in linea.
+                await session.aclose()
+
+        asyncio.create_task(_handoff())
 
     await session.start(ITSupportAgent(), room=ctx.room)
 

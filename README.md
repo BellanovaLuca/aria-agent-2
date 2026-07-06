@@ -214,6 +214,8 @@ Microservizio FastAPI che gestisce gli utenti e la cronologia operazioni. Persis
 | `GET /transcripts` | Lista trascrizioni chiamate |
 | `GET /transcripts/{filename}` | Contenuto trascrizione |
 | `GET /token` | Genera JWT LiveKit per chiamata WebRTC |
+| `GET /rooms` | Elenca le chiamate live attive (per l'handoff operatore) |
+| `GET /operator-token` | JWT per far entrare un operatore in una room specifica |
 
 **Documentazione interattiva:** http://localhost:8001/docs
 
@@ -277,6 +279,10 @@ Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + Ty
 **Dashboard** — metriche in tempo reale (totale, per canale, successi, falliti), grafico donut distribuzione canale, grafico a barre esito per canale, cronologia operazioni con paginazione.
 
 **Chiamate** — lista trascrizioni voce con visualizzazione a chat, filtro per data.
+
+**Chiamate Live** — le conversazioni vocali in corso (polling): un operatore può cliccare "Prendi in carico" per entrare nella stessa room WebRTC del chiamante. L'agente riconosce l'operatore, annuncia il passaggio e si fa da parte (handoff).
+
+> **Nota** — l'elenco delle room, l'emissione del token operatore e l'ingresso WebRTC sono verificati; il passaggio audio vero e proprio (agente che annuncia e lascia la linea) va validato con una chiamata SIP reale su LiveKit Cloud, perché dipende dall'infrastruttura telefonica.
 
 **Email** — monitoraggio flusso email in entrata/uscita, filtro per stato e data, simulazione invio email.
 
