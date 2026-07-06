@@ -6,7 +6,7 @@ un id di sessione; il servizio mantiene la cronologia della conversazione in
 memoria e risponde eseguendo gli stessi strumenti del canale vocale.
 
 Lo storage delle sessioni è in-memory (si azzera al riavvio) e monoprocesso —
-adeguato al PoC; in produzione andrebbe in una cache condivisa (es. Redis).
+adeguato a questo scenario; in produzione andrebbe in una cache condivisa (es. Redis).
 
 Endpoints (protetti da X-Internal-Api-Key):
   POST   /message            — invia un messaggio, riceve la risposta

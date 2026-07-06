@@ -1,7 +1,7 @@
 # ROADMAP — Aria Agent
 
-Evoluzione del progetto da PoC "reset password" a **piattaforma multicanale di
-supporto IT**. Questo documento traccia lo stato attuale, le fasi realizzate
+**Piattaforma multicanale di supporto IT**, evoluta da un iniziale agente di
+reset password. Questo documento traccia lo stato attuale, le fasi realizzate
 (con le implementazioni) e le direzioni candidate.
 
 > La cartella [`docs/`](docs/README.md) è cosa diversa: descrive la possibile
@@ -59,7 +59,6 @@ Messa in sicurezza della base prima di ogni evoluzione.
 ### A — Robustezza e qualità ✅
 - Fix dei bug frontend noti (leak `<audio>` in CallPanel, "X" del DatePicker, errori di rete silenziati) e rimozione di codice morto.
 - **ESLint + Prettier** configurati, **vitest** con test su `utils`.
-- **CI GitHub Actions**: pytest dei servizi + lint/test/build del frontend a ogni push/PR.
 - **Docker Compose**: `docker compose up --build` avvia l'intero stack (6 servizi + email processor + dashboard nginx); stato su volumi persistenti.
 
 ### B — Nuove funzionalità dell'agente

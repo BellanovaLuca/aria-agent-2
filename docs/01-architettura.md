@@ -45,7 +45,7 @@ testo, con integrazione ServiceNow e Active Directory.
 Principio chiave: **i due canali condividono lo stesso Unlock Orchestrator**.
 Il canale è solo il punto di ingresso; tutta la logica di business
 (identificazione, verifica stato, sblocco, ticketing, audit) vive in un unico
-servizio. È lo stesso pattern già adottato nella PoC, dove voce, chat ed email
+servizio. È lo stesso pattern già adottato nel progetto, dove voce, chat ed email
 condividono la logica in `shared/operations.py` (reset, sblocco, ricerca KB,
 ticket) e i servizi mock (`user_service`, `ticket_service`): qui viene portato
 a livello enterprise.
@@ -84,7 +84,7 @@ I due canali differiscono per **natura e punto di ingresso**:
 | Motore voice | **Amazon Nova Sonic 2** su Amazon Bedrock (stream bidirezionale) | STT + LLM + TTS in un unico modello speech-to-speech, supporto it-IT nativo |
 
 Perché LiveKit self-hosted e non LiveKit Cloud: requisito di compliance — tutto
-il media path resta nell'account AWS di destinazione. La PoC usa LiveKit Cloud solo
+il media path resta nell'account AWS di destinazione. Il progetto usa LiveKit Cloud solo
 per comodità di setup; il codice agente è identico nei due casi.
 
 Alternative di telefonia valutate (documentate da AWS nella
@@ -92,7 +92,7 @@ Alternative di telefonia valutate (documentate da AWS nella
 
 | Opzione | Pro | Contro | Verdetto |
 |---|---|---|---|
-| **SIP trunk → LiveKit self-hosted → Nova Sonic** | Massimo riuso PoC, media in-account, plugin ufficiale AWS↔LiveKit | Gestione operativa di LiveKit (EKS, Redis, porte UDP) | **Consigliata** |
+| **SIP trunk → LiveKit self-hosted → Nova Sonic** | Massimo riuso del progetto, media in-account, plugin ufficiale AWS↔LiveKit | Gestione operativa di LiveKit (EKS, Redis, porte UDP) | **Consigliata** |
 | Amazon Connect | Telefonia completamente gestita, numeri inclusi | Nessuna integrazione nativa Nova Sonic: serve comunque un media bridge custom; costo per minuto più alto | Solo se Connect è già in uso |
 | SIP server custom (EC2 + RTP → Bedrock) | Nessuna dipendenza da framework | Reinventa quello che LiveKit/Pipecat fanno già; alto effort | Scartata |
 
@@ -118,7 +118,7 @@ vedi §1 e [04 — Sicurezza](04-sicurezza-compliance.md).
 
 ### 2.3 Unlock Orchestrator (core)
 
-Sostituto di produzione dello `user_service` mock della PoC. FastAPI su ECS
+Sostituto di produzione dello `user_service` mock del progetto. FastAPI su ECS
 Fargate (≥ 2 task, multi-AZ), API interna non esposta a internet (ALB interno,
 security group che accetta solo i task agente).
 
@@ -152,14 +152,14 @@ Dettaglio completo in [03 — Integrazione ServiceNow e AD](03-integrazione-serv
 
 ---
 
-## 3. Gap analysis: PoC → produzione
+## 3. Gap analysis: progetto → produzione
 
-La PoC è nel frattempo cresciuta e implementa già molte capacità che la
-produzione riprende: la differenza principale non è più *cosa* fa, ma i
-**provider** e l'**infrastruttura** (mock/cloud gestito → AWS enterprise), oltre
-al **restringimento di scope** allo sblocco.
+Il progetto implementa già molte capacità che la produzione riprende: la
+differenza principale non è più *cosa* fa, ma i **provider** e
+l'**infrastruttura** (mock/cloud gestito → AWS enterprise), oltre al
+**restringimento di scope** allo sblocco.
 
-| Aspetto | PoC (questo repo, oggi) | Produzione |
+| Aspetto | Progetto (questo repo, oggi) | Produzione |
 |---|---|---|
 | Caso d'uso | Reset password, **sblocco utenze**, Q&A su KB (RAG), **ticketing** | **Solo sblocco utenze** — nessuna password trattata |
 | Canali | Voce (telefono/WebRTC) + email + **chat testuale** | Voce (telefono) + testo (email → ticket ServiceNow) |
@@ -178,7 +178,7 @@ al **restringimento di scope** allo sblocco.
 | Trascrizioni | File `.txt` locali | S3 cifrato KMS, retention policy |
 | Osservabilità | Log strutturati su stdout | CloudWatch Logs/Metrics/Alarms, X-Ray, dashboard |
 
-**Cosa si riusa della PoC:** il framework LiveKit Agents e la struttura
+**Cosa si riusa del progetto:** il framework LiveKit Agents e la struttura
 dell'agente (`AgentSession`, eventi di trascrizione, `@llm.function_tool`), il
 pattern "agente sottile + logica condivisa" (`shared/operations.py`, riusata da
 voce e chat), il prompt design (persona, regola "tool call silenziosa" che ha
@@ -225,7 +225,7 @@ pipeline CI/CD con gate (lint, test, scan dipendenze e immagini).
   voce > 3 s". Ogni allarme con runbook.
 
 I KPI di prodotto (containment, AHT, success rate) si derivano da queste
-metriche + dai ticket ServiceNow; la dashboard React della PoC si evolve in
+metriche + dai ticket ServiceNow; la dashboard React del progetto si evolve in
 dashboard di monitoraggio leggendo da CloudWatch/DynamoDB invece che dal mock.
 
 ---

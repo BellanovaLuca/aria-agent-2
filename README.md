@@ -1,7 +1,5 @@
 # Aria Agent
 
-[![CI](https://github.com/BellanovaLuca/aria-agent-2/actions/workflows/ci.yml/badge.svg)](https://github.com/BellanovaLuca/aria-agent-2/actions/workflows/ci.yml)
-
 Piattaforma open-source per costruire **agenti AI multicanale** con voce, email e interfaccia web. Il progetto include un'implementazione di riferimento ma l'architettura è progettata per essere adattata a qualsiasi caso d'uso conversazionale.
 
 L'assistente "Sofia" gestisce tre tipi di richieste: **reset password**, **sblocco utenza** (con verifica d'identità) e **domande IT** — a queste ultime risponde attingendo a una **knowledge base** (RAG) costruita sui documenti aziendali caricati dalla dashboard. È raggiungibile su **tre canali** che condividono gli stessi strumenti e la stessa logica: **voce** (telefono/WebRTC via Gemini Live), **email** (processing asincrono) e **chat testuale** (widget nella dashboard, via Gemini con function calling).
@@ -10,7 +8,7 @@ Stack: [LiveKit Agents](https://github.com/livekit/agents) + **Google Gemini Liv
 
 Per lo stato del progetto e le fasi di sviluppo con le relative implementazioni, vedi il [**ROADMAP**](ROADMAP.md).
 
-> **Nota** — la cartella [`docs/`](docs/README.md) non descrive questa PoC:
+> **Nota** — la cartella [`docs/`](docs/README.md) non descrive questo progetto:
 > contiene l'architettura e la documentazione tecnica di una **possibile
 > soluzione di produzione su ambiente AWS** (Amazon Nova Sonic, sblocco
 > utenze) con possibili integrazioni verso ServiceNow e Active Directory.
@@ -97,7 +95,7 @@ Il sistema integra **tre layer infrastrutturali esterni** (LiveKit Cloud, Twilio
 | **Setup** | Zero — account gratuito su livekit.io | Docker + Redis + IP pubblico + porte UDP aperte |
 | **SIP handling** | Incluso, gestito da LiveKit | Richiede il servizio separato `livekit/sip` |
 | **Piano gratuito** | 1.000 minuti agente/mese | Nessun limite (costi infra a tuo carico) |
-| **Adatto a** | POC, sviluppo, demo, piccoli volumi | Produzione, privacy totale, grandi volumi |
+| **Adatto a** | prototipazione, sviluppo, demo, piccoli volumi | Produzione, privacy totale, grandi volumi |
 
 ### Cosa fa LiveKit Cloud in questo progetto
 
@@ -271,7 +269,7 @@ Microservizio FastAPI che espone l'assistente "Sofia" come **chat testuale**. Us
 | `DELETE /sessions/{id}` | Dimentica una conversazione |
 
 - Il loop di **function calling** è gestito lato server: il modello richiede uno strumento, il servizio lo esegue (via le operazioni condivise, con `channel="chat"`), gli restituisce il risultato e ripete finché produce una risposta testuale.
-- Le **sessioni** sono in memoria (si azzerano al riavvio) con un cap per non crescere senza limiti — adeguato al PoC; in produzione andrebbero in una cache condivisa.
+- Le **sessioni** sono in memoria (si azzerano al riavvio) con un cap per non crescere senza limiti — adeguato al progetto; in produzione andrebbero in una cache condivisa.
 - La password temporanea non entra mai nel contesto del modello: come per la voce, viene recapitata via email.
 
 **Documentazione interattiva:** http://localhost:8004/docs

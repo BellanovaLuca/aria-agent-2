@@ -4,14 +4,14 @@
 > produzione** su ambiente **AWS** con **Amazon Nova Sonic** e integrazioni con
 > **ServiceNow** e **Active Directory**.
 >
-> **Nota** — la PoC in questo repository è nel frattempo cresciuta in una
-> piattaforma multicanale di supporto IT (voce, email, chat) che già dimostra
-> reset password, **sblocco utenze**, Q&A su knowledge base (RAG), **ticketing**
-> (mock ServiceNow), handoff a operatore e analisi AI post-chiamata — con
-> Google Gemini e servizi mock. Questa cartella descrive come portare quel
-> nucleo in **produzione su AWS**, restringendo lo scope allo sblocco (più
-> basso rischio) e sostituendo i provider mock con quelli enterprise. Vedi il
-> [ROADMAP](../ROADMAP.md) del repo per lo stato della PoC.
+> **Nota** — il progetto in questo repository è una **piattaforma multicanale
+> di supporto IT** (voce, email, chat) che implementa reset password,
+> **sblocco utenze**, Q&A su knowledge base (RAG), **ticketing** (mock
+> ServiceNow), handoff a operatore e analisi AI post-chiamata — con Google
+> Gemini e servizi mock. Questa cartella descrive come portare quel nucleo in
+> **produzione su AWS**, restringendo lo scope allo sblocco (più basso rischio)
+> e sostituendo i provider mock con quelli enterprise. Vedi il
+> [ROADMAP](../ROADMAP.md) del repo per lo stato del progetto.
 
 ## Scope della soluzione di produzione
 
@@ -23,12 +23,12 @@ dominio** (account Active Directory in stato `locked-out`), tramite due canali:
 | **Voce** | Chiamata telefonica deviata verso numero dedicato (sincrono) | Amazon Nova Sonic 2 (speech-to-speech, it-IT) su Amazon Bedrock |
 | **Testo** | Email → ticket ServiceNow automatico, esaminato dal Text Agent (asincrono) | Amazon Bedrock (Converse API) con lo stesso layer di tool |
 
-Rispetto alla PoC, la soluzione di produzione restringe deliberatamente lo scope
+Rispetto al progetto, la soluzione di produzione restringe deliberatamente lo scope
 e cambia i mattoni infrastrutturali:
 
 - **non genera né gestisce password** — esegue solo l'operazione di unlock
   (rischio più basso: nessuna credenziale trattata);
-- usa **ServiceNow** come sistema di record (il mock `ticket_service` della PoC
+- usa **ServiceNow** come sistema di record (il mock `ticket_service` del progetto
   ne anticipa il pattern) — ticket ITSM per ogni richiesta;
 - usa **Active Directory** come sistema di identità (verifica stato + unlock);
 - gira interamente in un **ambiente AWS dedicato**.
@@ -37,7 +37,7 @@ e cambia i mattoni infrastrutturali:
 
 | Documento | Contenuto |
 |---|---|
-| [01 — Architettura di sistema](01-architettura.md) | Architettura target AWS (voce + testo), componenti, gap analysis PoC → produzione |
+| [01 — Architettura di sistema](01-architettura.md) | Architettura target AWS (voce + testo), componenti, gap analysis progetto → produzione |
 | [02 — Workflow end-to-end](02-workflow.md) | Flussi conversazionali e di sistema: happy path, casi di errore, escalation |
 | [03 — Integrazione ServiceNow e Active Directory](03-integrazione-servicenow-ad.md) | Pattern di integrazione, API, autenticazione, opzioni a confronto |
 | [04 — Sicurezza e compliance](04-sicurezza-compliance.md) | Trust boundary, minimizzazione dati, cifratura, audit, GDPR, anti-abuso |

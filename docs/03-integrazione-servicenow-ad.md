@@ -9,7 +9,7 @@
 | **ServiceNow** | Sistema di record ITSM: ogni richiesta di sblocco è un ticket con ciclo di vita completo | Nessuna operazione su AD senza ticket corrispondente |
 | **Active Directory** | Sistema di identità: stato dell'account (`lockedOut`, `enabled`) e operazione di unlock | L'agente non modifica mai altri attributi oltre allo sblocco |
 
-> Nella PoC questo ruolo è simulato dal mock `ticket_service` (numeri `INCxxxxxxx`,
+> Nel progetto questo ruolo è simulato dal mock `ticket_service` (numeri `INCxxxxxxx`,
 > stati `new/in_progress/resolved/closed`, note di lavorazione): stessa forma del
 > ciclo di vita del ticket, così l'integrazione con ServiceNow reale è una
 > sostituzione del backend dietro le stesse operazioni (`open_ticket`,

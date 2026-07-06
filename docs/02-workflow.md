@@ -48,10 +48,10 @@ identica; cambia solo il trasporto.
                   Il ticket ServiceNow resta come record permanente.
 ```
 
-Regole di prompt ereditate dalla PoC (validate sui transcript):
+Regole di prompt ereditate dal progetto (validate sui transcript):
 
 - **Tool call silenziosa** — l'agente non pronuncia frasi tipo "verifico…"
-  prima di chiamare il tool: nella PoC quelle frasi venivano interrotte
+  prima di chiamare il tool: nel progetto quelle frasi venivano interrotte
   dall'utente e la generazione (tool call inclusa) veniva cancellata.
 - **Persona definita** (nome, tono caldo, it-IT) — riduce l'abbandono.
 - **Scope rigido** — l'agente rifiuta gentilmente qualunque richiesta diversa

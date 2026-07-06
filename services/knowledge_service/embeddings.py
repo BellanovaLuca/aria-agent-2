@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 
 EMBED_MODEL = os.getenv("EMBED_MODEL", "gemini-embedding-001")
-# 768 dim: buon compromesso qualità/velocità per il retrieval del PoC.
+# 768 dim: buon compromesso qualità/velocità per il retrieval in questo contesto.
 EMBED_DIM = int(os.getenv("EMBED_DIM", "768"))
 
 TaskType = Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
