@@ -22,7 +22,7 @@ jobs:
             pip install -r "services/$svc/requirements.txt"
           done
           pip install pytest pytest-asyncio
-      - name: Esegui i test (offline: embedding fake, Qdrant in-memory, LLM mock)
+      - name: "Esegui i test (offline: embedding fake, Qdrant in-memory, LLM mock)"
         run: |
           for svc in knowledge_service user_service chat_service ticket_service analytics_service; do
             echo "== $svc =="
