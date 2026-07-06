@@ -26,8 +26,9 @@ from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-load_dotenv(Path(__file__).parent.parent / ".env")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
+sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from shared.auth import API_KEY_HEADER, make_api_key_dependency
@@ -39,7 +40,7 @@ from store import AnalyticsStore
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("analytics_service")
 
-TRANSCRIPTS_DIR = Path(os.getenv("TRANSCRIPTS_DIR", str(Path(__file__).parent.parent / "transcripts")))
+TRANSCRIPTS_DIR = Path(os.getenv("TRANSCRIPTS_DIR", str(_ROOT / "transcripts")))
 DB_PATH = Path(os.getenv("ANALYSES_DB_PATH", str(Path(__file__).parent / "analyses.json")))
 # Cap di sicurezza sul batch di analisi per invocazione (ogni item è una chiamata LLM).
 DEFAULT_LIMIT = int(os.getenv("ANALYZE_BATCH_LIMIT", "25"))

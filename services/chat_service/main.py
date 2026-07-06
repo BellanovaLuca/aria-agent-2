@@ -27,8 +27,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
 from pydantic import BaseModel, Field
 
-load_dotenv(Path(__file__).parent.parent / ".env")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
+sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from shared.auth import API_KEY_HEADER, make_api_key_dependency

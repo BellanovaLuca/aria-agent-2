@@ -20,7 +20,8 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+sys.path.insert(0, str(_ROOT))
 from shared import operations
 
 log = logging.getLogger(__name__)

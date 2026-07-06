@@ -172,7 +172,7 @@ Con un account Trial e un solo numero, il Dev Phone non funziona: chiamerebbe lo
 
 ## Componenti applicativi
 
-### 1. Voice Agent (`voice_agent/`)
+### 1. Voice Agent (`services/voice_agent/`)
 
 Agente LiveKit che gestisce le chiamate vocali in ingresso (telefono e browser WebRTC). Costruito su **LiveKit Agents** con **Google Gemini Live** come modello unificato per STT, LLM e TTS — nessun provider separato necessario.
 
@@ -183,11 +183,11 @@ Agente LiveKit che gestisce le chiamate vocali in ingresso (telefono e browser W
 | Voce | Aoede (it-IT, femminile) — configurabile |
 | Lingua | Italiano — modificabile via `language` in `AgentSession` |
 
-**Personalizzazione** — le costanti `AGENT_NAME` e `INSTRUCTIONS` in `voice_agent/agent.py` definiscono nome, personalità e comportamento dell'agente. I tool function in `voice_agent/tools.py` espongono le capacità al LLM.
+**Personalizzazione** — le costanti `AGENT_NAME` e `INSTRUCTIONS` in `services/voice_agent/agent.py` definiscono nome, personalità e comportamento dell'agente. I tool function in `services/voice_agent/tools.py` espongono le capacità al LLM.
 
 **Chiamata WebRTC:** integrata nel frontend React (pannello "Call") — parla con l'agente direttamente dal browser, senza telefono né Zoiper. Latenza ~1-1.5s contro i 2-3s della telefonia SIP.
 
-### 2. Email Processor (`email_processor/`)
+### 2. Email Processor (`services/email_processor/`)
 
 Loop asincrono con polling sull'inbox mock ogni N secondi. Per ogni email non processata:
 1. Estrae il campo rilevante dal corpo con regex
@@ -195,9 +195,9 @@ Loop asincrono con polling sull'inbox mock ogni N secondi. Per ogni email non pr
 3. Invia email di risposta tramite l'Email Service
 4. Marca l'email come processata
 
-### 3. User Service (`user_service/` — porta 8001)
+### 3. User Service (`services/user_service/` — porta 8001)
 
-Microservizio FastAPI che gestisce gli utenti e la cronologia operazioni. Persiste i dati su `user_service/db.json` (escluso dal repo — generato al primo avvio).
+Microservizio FastAPI che gestisce gli utenti e la cronologia operazioni. Persiste i dati su `services/user_service/db.json` (escluso dal repo — generato al primo avvio).
 
 | Endpoint | Descrizione |
 |----------|-------------|
@@ -224,7 +224,7 @@ Microservizio FastAPI che gestisce gli utenti e la cronologia operazioni. Persis
 > sviluppo Vite lo inietta automaticamente per il frontend; per prove manuali:
 > `curl -H "X-Internal-Api-Key: $INTERNAL_API_KEY" http://localhost:8001/users`.
 
-### 4. Email Service (`email_service/` — porta 8002)
+### 4. Email Service (`services/email_service/` — porta 8002)
 
 Microservizio FastAPI che simula un server email. Storage in memoria (si resetta al riavvio).
 
@@ -238,7 +238,7 @@ Microservizio FastAPI che simula un server email. Storage in memoria (si resetta
 
 **Documentazione interattiva:** http://localhost:8002/docs
 
-### 5. Knowledge Service (`knowledge_service/` — porta 8003)
+### 5. Knowledge Service (`services/knowledge_service/` — porta 8003)
 
 Microservizio FastAPI che alimenta la Q&A dell'agente. Indicizza documenti (PDF, Markdown, testo) in un vector store **Qdrant** e li rende interrogabili semanticamente.
 
@@ -251,13 +251,13 @@ Microservizio FastAPI che alimenta la Q&A dell'agente. Indicizza documenti (PDF,
 
 - **Chunking**: ~280 parole per frammento con sovrapposizione, così un'informazione a cavallo di due chunk resta recuperabile.
 - **Embedding**: modello `gemini-embedding-001` (768 dim), un unico provider con l'LLM.
-- **Qdrant**: gira in locale embedded (cartella `knowledge_service/qdrant_data/`, esclusa dal repo). Impostando `QDRANT_URL` si passa a un server Qdrant esterno o a Qdrant Cloud senza modifiche al codice.
+- **Qdrant**: gira in locale embedded (cartella `services/knowledge_service/qdrant_data/`, esclusa dal repo). Impostando `QDRANT_URL` si passa a un server Qdrant esterno o a Qdrant Cloud senza modifiche al codice.
 
 Il tool `search_knowledge_base` del voice agent interroga questo servizio; il prompt impone all'agente di rispondere **solo** con i passaggi restituiti (anti-allucinazione) e di citare la fonte.
 
 **Documentazione interattiva:** http://localhost:8003/docs
 
-### 6. Chat Service (`chat_service/` — porta 8004)
+### 6. Chat Service (`services/chat_service/` — porta 8004)
 
 Microservizio FastAPI che espone l'assistente "Sofia" come **chat testuale**. Usa **Gemini** (`gemini-2.5-flash`) con **function calling** e gli stessi tre strumenti del canale vocale, condivisi tramite `shared/operations.py` — reset, sblocco e Q&A si comportano in modo identico su voce e chat.
 
@@ -272,7 +272,7 @@ Microservizio FastAPI che espone l'assistente "Sofia" come **chat testuale**. Us
 
 **Documentazione interattiva:** http://localhost:8004/docs
 
-### 7. Ticket Service (`ticket_service/` — porta 8005)
+### 7. Ticket Service (`services/ticket_service/` — porta 8005)
 
 Microservizio FastAPI che simula un **ITSM (mock ServiceNow)**. L'agente vi apre un ticket quando non può risolvere una richiesta (fuori dai suoi ambiti, domanda senza risposta in knowledge base, o richiesta esplicita dell'utente); un operatore li gestisce dalla dashboard.
 
@@ -288,7 +288,7 @@ Microservizio FastAPI che simula un **ITSM (mock ServiceNow)**. L'agente vi apre
 
 **Documentazione interattiva:** http://localhost:8005/docs
 
-### 8. Analytics Service (`analytics_service/` — porta 8006)
+### 8. Analytics Service (`services/analytics_service/` — porta 8006)
 
 Microservizio FastAPI che genera **analisi AI post-chiamata**. Un job on-demand analizza le trascrizioni con **Gemini** (output strutturato JSON) estraendo per ciascuna: riassunto, esito (risolto/non risolto/escalation), sentiment, intento e un punteggio di qualità 1-5 con motivazione.
 
@@ -304,7 +304,7 @@ Microservizio FastAPI che genera **analisi AI post-chiamata**. Un job on-demand 
 
 **Documentazione interattiva:** http://localhost:8006/docs
 
-### 9. Frontend React (`frontend-react/` — porta 5173)
+### 9. Frontend React (`frontend/` — porta 5173)
 
 Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + TypeScript + Tailwind CSS**. Tema GitHub Dark con palette cromatica personalizzabile via tweak panel.
 
@@ -396,18 +396,16 @@ cd aria-agent
 conda create -n aria-agent python=3.11 -y
 conda activate aria-agent
 
-pip install -r user_service/requirements.txt
-pip install -r email_service/requirements.txt
-pip install -r email_processor/requirements.txt
-pip install -r knowledge_service/requirements.txt
-pip install -r chat_service/requirements.txt
-pip install -r voice_agent/requirements.txt
+for svc in user_service email_service email_processor knowledge_service \
+           chat_service ticket_service analytics_service voice_agent; do
+  pip install -r "services/$svc/requirements.txt"
+done
 ```
 
 ### 3. Installa le dipendenze del frontend
 
 ```bash
-cd frontend-react && npm install && cd ..
+cd frontend && npm install && cd ..
 ```
 
 ### 4. Installa LiveKit CLI (solo per il setup telefonico)
@@ -476,7 +474,7 @@ INTERNAL_API_KEY=your_internal_api_key
 ### Avvio completo
 
 ```bash
-./run_all.sh
+./scripts/run_all.sh
 ```
 
 | Ordine | Processo | Porta |
@@ -496,7 +494,7 @@ INTERNAL_API_KEY=your_internal_api_key
 ### Arresto completo
 
 ```bash
-./stop_all.sh
+./scripts/stop_all.sh
 ```
 
 ### Avvio manuale (sviluppo)
@@ -505,41 +503,41 @@ INTERNAL_API_KEY=your_internal_api_key
 conda activate aria-agent
 
 # Terminale 1
-cd user_service && uvicorn main:app --port 8001 --reload
+cd services/user_service && uvicorn main:app --port 8001 --reload
 
 # Terminale 2
-cd email_service && uvicorn main:app --port 8002 --reload
+cd services/email_service && uvicorn main:app --port 8002 --reload
 
 # Terminale 3
-cd knowledge_service && uvicorn main:app --port 8003 --reload
+cd services/knowledge_service && uvicorn main:app --port 8003 --reload
 
 # Terminale 4
-cd chat_service && uvicorn main:app --port 8004 --reload
+cd services/chat_service && uvicorn main:app --port 8004 --reload
 
 # Terminale 5
-cd ticket_service && uvicorn main:app --port 8005 --reload
+cd services/ticket_service && uvicorn main:app --port 8005 --reload
 
 # Terminale 6
-cd analytics_service && uvicorn main:app --port 8006 --reload
+cd services/analytics_service && uvicorn main:app --port 8006 --reload
 
 # Terminale 7
-python email_processor/processor.py
+python services/email_processor/processor.py
 
 # Terminale 8 — Voice Agent
-python voice_agent/agent.py dev
+python services/voice_agent/agent.py dev
 
 # Terminale 9 — Frontend
-cd frontend-react && npm run dev
+cd frontend && npm run dev
 ```
 
 ### Avvio minimale (solo email + frontend, senza voice agent)
 
 ```bash
 conda activate aria-agent
-cd user_service && uvicorn main:app --port 8001 --reload &
-cd email_service && uvicorn main:app --port 8002 --reload &
-python email_processor/processor.py &
-cd frontend-react && npm run dev
+cd services/user_service && uvicorn main:app --port 8001 --reload &
+cd services/email_service && uvicorn main:app --port 8002 --reload &
+python services/email_processor/processor.py &
+cd frontend && npm run dev
 ```
 
 ---
@@ -552,19 +550,19 @@ I test unitari non richiedono chiavi API né rete (gli embedding sono mockati, Q
 conda activate aria-agent
 
 # Knowledge Service — chunking + store vettoriale
-cd knowledge_service && python -m pytest tests/ -q
+cd services/knowledge_service && python -m pytest tests/ -q
 
 # User Service — sblocco utenza (verifica identità, anti-abuso, stati)
-cd user_service && python -m pytest tests/ -q
+cd services/user_service && python -m pytest tests/ -q
 
 # Chat Service — loop di function calling con un client Gemini fake
-cd chat_service && python -m pytest tests/ -q
+cd services/chat_service && python -m pytest tests/ -q
 
 # Ticket Service — numerazione INC, filtri, PATCH, persistenza
-cd ticket_service && python -m pytest tests/ -q
+cd services/ticket_service && python -m pytest tests/ -q
 
 # Analytics Service — aggregazione, store, /analyze con LLM fake
-cd analytics_service && python -m pytest tests/ -q
+cd services/analytics_service && python -m pytest tests/ -q
 ```
 
 ---
@@ -596,72 +594,34 @@ grep -iE "error|exception|traceback" /tmp/run_all.log
 ```
 aria-agent/
 │
-├── shared/
-│   ├── __init__.py
-│   ├── auth.py                # Dependency X-Internal-Api-Key condivisa
-│   ├── operations.py          # Reset/sblocco/ricerca — logica condivisa voce+chat
+├── shared/                    # Libreria condivisa da tutti i servizi
+│   ├── auth.py                # Dependency X-Internal-Api-Key
+│   ├── operations.py          # Reset/sblocco/ricerca/ticket — logica condivisa voce+chat
 │   └── models.py              # Modelli Pydantic condivisi
 │
-├── user_service/
-│   ├── main.py                # FastAPI: CRUD utenti + operazioni + history + token WebRTC
-│   └── requirements.txt
+├── services/                  # Microservizi Python (ognuno avviabile da solo)
+│   ├── user_service/          # CRUD utenti + reset/sblocco + history + token/rooms LiveKit (8001)
+│   ├── email_service/         # Inbox e sent box mock (8002)
+│   ├── email_processor/       # Loop asincrono di polling email
+│   ├── knowledge_service/     # RAG: upload/search documenti su Qdrant (8003)
+│   ├── chat_service/          # Canale chat: Gemini function calling (8004)
+│   ├── ticket_service/        # Ticketing mock ServiceNow (8005)
+│   ├── analytics_service/     # Analisi AI post-chiamata (8006)
+│   └── voice_agent/           # Agente vocale LiveKit + Gemini Live
+│       (ogni servizio: main.py/agent.py, tests/, requirements.txt)
 │
-├── email_service/
-│   ├── main.py                # FastAPI: inbox e sent box mock
-│   └── requirements.txt
-│
-├── email_processor/
-│   ├── processor.py           # Loop asincrono polling email
-│   └── requirements.txt
-│
-├── knowledge_service/
-│   ├── main.py                # FastAPI: upload/list/delete documenti + /search
-│   ├── chunker.py             # Estrazione testo + chunking (puro, testato)
-│   ├── embeddings.py          # Wrapper embedding Gemini (singleton lazy)
-│   ├── store.py               # Vector store Qdrant (indicizza, cerca, elimina)
-│   ├── tests/                 # Test unitari (chunker, store con embedding fake)
-│   └── requirements.txt
-│
-├── chat_service/
-│   ├── main.py                # FastAPI: /message (chat), sessioni in-memory
-│   ├── agent.py               # Loop function-calling Gemini + prompt chat
-│   ├── tests/                 # Test del loop con client Gemini fake
-│   └── requirements.txt
-│
-├── ticket_service/
-│   ├── main.py                # FastAPI: CRUD ticket (mock ServiceNow), JSON
-│   ├── tests/                 # Test numerazione INC, filtri, PATCH, persistenza
-│   └── requirements.txt
-│
-├── analytics_service/
-│   ├── main.py                # FastAPI: /analyze, /analyses, /summary
-│   ├── analyzer.py            # Analisi Gemini con output strutturato (mockabile)
-│   ├── store.py               # Persistenza + aggregazione (puro, testato)
-│   ├── tests/                 # Test aggregazione, store, /analyze con LLM fake
-│   └── requirements.txt
-│
-├── voice_agent/
-│   ├── agent.py               # Agente LiveKit + Gemini Live + trascrizione
-│   ├── tools.py               # Tool functions esposte al LLM
-│   └── requirements.txt
-│
-├── frontend-react/            # Dashboard React
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── pages/             # Dashboard, Calls, Admin, Email, Knowledge
-│   │   ├── components/        # Sidebar, MetricCard, StatusBadge, Toast, ...
-│   │   ├── hooks/             # useApi, useToast
-│   │   ├── utils.ts
-│   │   └── types.ts
+├── frontend/                  # Dashboard React (Vite, porta 5175)
+│   ├── src/                   # pages/, components/, hooks/, utils.ts, types.ts
 │   ├── package.json
 │   └── vite.config.ts         # Proxy: /api→8001 /email→8002 /knowledge→8003 /chat→8004 /tickets→8005 /analytics→8006
 │
-├── transcripts/               # Trascrizioni chiamate — generata a runtime, non versionata
+├── scripts/                   # run_all.sh, stop_all.sh, restart_services.sh
+├── docs/                      # Documentazione tecnica (evoluzione a produzione)
+├── transcripts/               # Trascrizioni chiamate — runtime, non versionate
 │
-├── .env                       # Configurazione locale — non committare
-├── .env.example               # Template configurazione
-├── run_all.sh                 # Avvio unificato
-└── stop_all.sh                # Arresto unificato
+├── ROADMAP.md                 # Fasi di sviluppo e implementazioni
+├── .env / .env.example        # Configurazione (il .env non si committa)
+└── README.md
 ```
 
 ---
@@ -670,13 +630,13 @@ aria-agent/
 
 | Funzionalità | Come aggiungerla |
 |---|---|
-| Nuovo tool per l'agente vocale | Aggiungi funzione in `voice_agent/tools.py`, registrala nella lista `tools=[...]` in `voice_agent/agent.py` e aggiorna le `INSTRUCTIONS` |
+| Nuovo tool per l'agente vocale | Aggiungi funzione in `services/voice_agent/tools.py`, registrala nella lista `tools=[...]` in `services/voice_agent/agent.py` e aggiorna le `INSTRUCTIONS` |
 | Nuovi documenti nella knowledge base | Caricali dalla pagina Knowledge della dashboard (o `POST /documents`) — vengono indicizzati e resi disponibili all'agente |
 | Vector store in produzione | Avvia un server Qdrant e imposta `QDRANT_URL` — nessuna modifica al codice |
-| Email reale (IMAP/SMTP) | Sostituisci `email_processor/processor.py` mantenendo l'interfaccia verso User Service |
+| Email reale (IMAP/SMTP) | Sostituisci `services/email_processor/processor.py` mantenendo l'interfaccia verso User Service |
 | Nuovo canale (WhatsApp, Telegram, ...) | Nuovo modulo che riusa `shared/operations.py` (come fanno voce e chat) con il proprio `channel` |
-| Database reale (PostgreSQL, SQLite) | Sostituisci la persistenza JSON in `user_service/main.py` |
+| Database reale (PostgreSQL, SQLite) | Sostituisci la persistenza JSON in `services/user_service/main.py` |
 | Lingua aggiuntiva | Modifica `language` in `AgentSession` e `INSTRUCTIONS` nell'agente |
 | Deploy containerizzato | Ogni processo è indipendente e containerizzabile con Docker |
 | LiveKit self-hosted | Configura `livekit/livekit` + `livekit/sip` con Docker Compose, aggiorna `LIVEKIT_URL` |
-| Voce diversa | Cambia il parametro `voice` in `GeminiRealtimeModel` (`voice_agent/agent.py`) |
+| Voce diversa | Cambia il parametro `voice` in `GeminiRealtimeModel` (`services/voice_agent/agent.py`) |

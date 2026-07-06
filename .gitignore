@@ -13,15 +13,15 @@ venv/
 *.env
 
 # Node
-frontend-react/node_modules/
-frontend-react/dist/
+frontend/node_modules/
+frontend/dist/
 
 # Runtime data
 transcripts/
-user_service/db.json
-ticket_service/tickets.json
-analytics_service/analyses.json
-knowledge_service/qdrant_data/
+services/user_service/db.json
+services/ticket_service/tickets.json
+services/analytics_service/analyses.json
+services/knowledge_service/qdrant_data/
 .pytest_cache/
 
 # Credentials & secrets

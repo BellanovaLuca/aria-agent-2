@@ -48,10 +48,11 @@ from livekit import api as lk_api
 from livekit.api import AccessToken, VideoGrants
 
 # Carica .env dalla root del progetto (funziona sia con run_all.sh che in standalone)
-load_dotenv(Path(__file__).parent.parent / ".env")
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
 
 # Aggiunge la root del progetto al path per importare i modelli condivisi
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(_ROOT))
 from shared.models import (
     ResetHistoryEntry,
     ResetRequest,
@@ -600,7 +601,7 @@ def get_operator_token(room: str = Query(..., min_length=1, max_length=128)):
 
 # ── Endpoints trascrizioni (per il frontend React) ────────────────────────────
 
-_TRANSCRIPTS_DIR = Path(__file__).parent.parent / "transcripts"
+_TRANSCRIPTS_DIR = _ROOT / "transcripts"
 
 
 def _transcript_label(filename: str) -> str:

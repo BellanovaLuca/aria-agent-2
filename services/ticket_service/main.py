@@ -31,8 +31,9 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv(Path(__file__).parent.parent / ".env")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
+sys.path.insert(0, str(_ROOT))
 
 from shared.auth import API_KEY_HEADER, make_api_key_dependency
 from shared.models import Ticket, TicketCreate, TicketUpdate

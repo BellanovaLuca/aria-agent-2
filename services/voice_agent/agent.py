@@ -20,7 +20,8 @@ from dotenv import load_dotenv
 
 # Carica .env dalla root del progetto prima di qualunque import LiveKit,
 # altrimenti LIVEKIT_URL / GOOGLE_API_KEY non sono disponibili all'avvio.
-load_dotenv(Path(__file__).parent.parent / ".env")
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
 
 from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli
 from livekit.agents.llm import ChatMessage
@@ -28,7 +29,7 @@ from livekit.agents.voice.events import ConversationItemAddedEvent, UserInputTra
 from livekit.plugins.google import realtime as google_realtime
 
 # sys.path consente l'import di voice_agent.tools dalla root del progetto
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(_ROOT))
 from voice_agent.tools import (
     check_ticket_status,
     open_support_ticket,
@@ -41,7 +42,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # Ogni chiamata genera un file .txt in questa cartella
-TRANSCRIPTS_DIR = Path(__file__).parent.parent / "transcripts"
+TRANSCRIPTS_DIR = _ROOT / "transcripts"
 TRANSCRIPTS_DIR.mkdir(exist_ok=True)
 
 # ── Istruzioni di sistema per Gemini Live ─────────────────────────────────────

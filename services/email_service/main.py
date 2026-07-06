@@ -29,8 +29,9 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # Carica .env dalla root (serve INTERNAL_API_KEY) e importa i moduli condivisi
-load_dotenv(Path(__file__).parent.parent / ".env")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())
+load_dotenv(_ROOT / ".env")
+sys.path.insert(0, str(_ROOT))
 from shared.models import Email, EmailCreate
 from shared.auth import API_KEY_HEADER, make_api_key_dependency
 

@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / ".env.example").is_file())))
 
 _TMP_DB = Path(tempfile.gettempdir()) / "aria_test_unlock_db.json"
 _TMP_DB.unlink(missing_ok=True)
