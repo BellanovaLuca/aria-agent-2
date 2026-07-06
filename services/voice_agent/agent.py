@@ -27,6 +27,7 @@ from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli
 from livekit.agents.llm import ChatMessage
 from livekit.agents.voice.events import ConversationItemAddedEvent, UserInputTranscribedEvent
 from livekit.plugins.google import realtime as google_realtime
+from google.genai import types as genai_types
 
 # sys.path: la cartella del servizio (per il modulo locale `tools`) e la radice
 # del repo (per `shared`, importato da tools).
@@ -134,12 +135,9 @@ class ITSupportAgent(Agent):
         Genera il saluto iniziale invece di aspettare che sia l'utente
         a parlare per primo — comportamento atteso in un centralino automatico.
         """
+        # Saluto breve: meno testo da generare = presentazione più rapida.
         await self.session.generate_reply(
-            instructions=(
-                f"Sei {AGENT_NAME}. Saluta il chiamante in modo caldo e naturale, "
-                f"presentati come {AGENT_NAME} del supporto IT e chiedi come puoi aiutarlo. "
-                "Non sembrare un robot: sii spontanea e umana fin dalla prima parola."
-            )
+            instructions=f"Presentati in una frase come {AGENT_NAME} del supporto IT e chiedi come puoi aiutare."
         )
 
 
@@ -162,6 +160,9 @@ async def entrypoint(ctx: JobContext) -> None:
             model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice="Aoede",  # voce femminile, calda e naturale — adatta alla personalità di Sofia
             language="it-IT",
+            # Disabilita il "thinking": riduce il ritardo tra fine frase utente e
+            # risposta (e velocizza il saluto iniziale).
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         ),
     )
 
