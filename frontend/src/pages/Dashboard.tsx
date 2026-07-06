@@ -550,9 +550,9 @@ export function Dashboard({ addToast }: Props) {
       <div className="section-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="heading-display" style={{ fontSize: 28, color: 'var(--text)', marginBottom: 4 }}>
-            Monitoraggio Reset
+            Panoramica
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Monitoraggio in tempo reale</p>
+          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Monitoraggio delle operazioni (reset e sblocco) in tempo reale</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button
