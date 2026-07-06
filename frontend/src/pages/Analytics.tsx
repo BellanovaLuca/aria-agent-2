@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiGet, apiPost } from '../hooks/useApi'
 import { ScrollToTop } from '../components/ScrollToTop'
-import { IcRefresh, IcStar, IcSparkles } from '../components/icons'
+import { IcRefresh, IcStar } from '../components/icons'
 import type { TranscriptAnalysis, AnalyticsSummary, ToastItem } from '../types'
 
 interface Props {
@@ -72,12 +72,38 @@ function Distribution({ title, data, meta }: { title: string; data: Record<strin
   )
 }
 
+const PAGE_SIZE = 8
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      aria-label="Analisi automatica"
+      onClick={() => onChange(!on)}
+      style={{
+        width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', padding: 2,
+        background: on ? 'var(--accent)' : 'var(--surface3)', transition: 'background .2s',
+        display: 'flex', alignItems: 'center', flexShrink: 0,
+      }}
+    >
+      <span style={{
+        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+        transform: on ? 'translateX(18px)' : 'translateX(0)', transition: 'transform .2s',
+        boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+      }} />
+    </button>
+  )
+}
+
 export function Analytics({ addToast, onOpenTranscript }: Props) {
   const [analyses, setAnalyses] = useState<TranscriptAnalysis[]>([])
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [auto, setAuto] = useState(() => localStorage.getItem('aria-analytics-auto') === 'true')
+  const [page, setPage] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async (spinner = false) => {
@@ -98,23 +124,33 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
   }, [])
 
   useEffect(() => { load(true) }, [load])
+  useEffect(() => { localStorage.setItem('aria-analytics-auto', String(auto)) }, [auto])
 
-  const runAnalysis = useCallback(async () => {
+  // Analizza solo le trascrizioni non ancora processate: il backend /analyze
+  // considera già i soli "pending", quindi non rifà lavoro fatto in passato.
+  const analyzePending = useCallback(async () => {
     setAnalyzing(true)
     try {
       const res = await apiPost<{ analyzed: string[]; remaining: number }>('/analytics/analyze', {})
-      if (res.analyzed.length === 0) {
-        addToast('info', 'Nessuna nuova trascrizione da analizzare.')
-      } else {
-        addToast('success', `Analizzate ${res.analyzed.length} trascrizioni${res.remaining > 0 ? `, ${res.remaining} rimaste` : ''}.`)
-      }
-      load(false)
-    } catch (e: unknown) {
-      addToast('error', `Analisi fallita: ${e instanceof Error ? e.message : e}`)
-    } finally {
-      setAnalyzing(false)
-    }
-  }, [addToast, load])
+      if (res.analyzed.length > 0) await load(false)
+    } catch { /* in automatico: silenzioso, riprova al giro successivo */ }
+    finally { setAnalyzing(false) }
+  }, [load])
+
+  // Quando l'analisi automatica è attiva: processa subito i pending e poi
+  // ricontrolla periodicamente se ne arrivano di nuovi (es. nuove chiamate).
+  useEffect(() => {
+    if (!auto) return
+    let active = true
+    const tick = () => { if (active) analyzePending() }
+    tick()
+    const id = setInterval(tick, 20_000)
+    return () => { active = false; clearInterval(id) }
+  }, [auto, analyzePending])
+
+  const totalPages = Math.max(1, Math.ceil(analyses.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages - 1)
+  const paged = analyses.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <div ref={scrollRef} style={{ padding: '28px 32px', height: '100%', overflowY: 'auto' }}>
@@ -124,14 +160,17 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
           <h1 className="heading-display" style={{ fontSize: 28, color: 'var(--text)', marginBottom: 4 }}>Analisi delle chiamate</h1>
           <p style={{ fontSize: 13, color: 'var(--text3)' }}>Qualità, esito e sentiment estratti dalle trascrizioni con AI</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={runAnalysis} disabled={analyzing}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: analyzing ? 'default' : 'pointer', boxShadow: '0 4px 14px var(--accent-glow)', opacity: analyzing ? 0.7 : 1 }}>
-            {analyzing
-              ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ display: 'inline-block' }} />
-              : <IcSparkles size={15} />}
-            {analyzing ? 'Analisi in corso…' : 'Analizza trascrizioni'}
-          </button>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <Toggle on={auto} onChange={(v) => { setAuto(v); addToast('info', v ? 'Analisi automatica attivata.' : 'Analisi automatica disattivata.') }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Analisi automatica</span>
+              <span style={{ fontSize: 11, color: auto ? 'var(--success)' : 'var(--text3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {auto && analyzing && <span className="w-3 h-3 border-2 border-gh-blue border-t-transparent rounded-full animate-spin" style={{ display: 'inline-block' }} />}
+                {auto ? (analyzing ? 'analisi in corso…' : 'attiva') : 'disattivata'}
+              </span>
+            </div>
+          </div>
           <button onClick={() => load(false)} aria-label="Aggiorna" className="btn-icon"
             style={{ color: 'var(--text2)', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex' }}>
             <IcRefresh />
@@ -176,30 +215,48 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
             </div>
             {analyses.length === 0 ? (
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>
-                Nessuna analisi. Premi <strong>Analizza trascrizioni</strong> per generarle dalle chiamate registrate.
+                {auto
+                  ? 'Nessuna analisi ancora. Le chiamate registrate vengono analizzate automaticamente.'
+                  : <>Analisi disattivata. Attiva l&apos;<strong>Analisi automatica</strong> qui sopra per generarle dalle chiamate registrate.</>}
               </div>
             ) : (
-              analyses.map((a) => (
-                <div key={a.filename} style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{a.label}</span>
-                    <Chip label={INTENT_LABEL[a.intent] ?? a.intent} color="var(--accent)" />
-                    <Chip label={OUTCOME_META[a.outcome]?.label ?? a.outcome} color={OUTCOME_META[a.outcome]?.color ?? '#8b96a5'} />
-                    <Chip label={SENTIMENT_META[a.sentiment]?.label ?? a.sentiment} color={SENTIMENT_META[a.sentiment]?.color ?? '#8b96a5'} />
-                    <span style={{ marginLeft: 'auto' }}><Stars score={a.quality_score} /></span>
+              <>
+                {paged.map((a) => (
+                  <div key={a.filename} style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{a.label}</span>
+                      <Chip label={INTENT_LABEL[a.intent] ?? a.intent} color="var(--accent)" />
+                      <Chip label={OUTCOME_META[a.outcome]?.label ?? a.outcome} color={OUTCOME_META[a.outcome]?.color ?? '#8b96a5'} />
+                      <Chip label={SENTIMENT_META[a.sentiment]?.label ?? a.sentiment} color={SENTIMENT_META[a.sentiment]?.color ?? '#8b96a5'} />
+                      <span style={{ marginLeft: 'auto' }}><Stars score={a.quality_score} /></span>
+                    </div>
+                    <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 5 }}>{a.summary}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', fontStyle: 'italic', marginBottom: onOpenTranscript ? 8 : 0 }}>{a.quality_notes}</div>
+                    {onOpenTranscript && (
+                      <button
+                        onClick={() => onOpenTranscript(a.filename)}
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}
+                      >
+                        Vedi trascrizione →
+                      </button>
+                    )}
                   </div>
-                  <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 5 }}>{a.summary}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', fontStyle: 'italic', marginBottom: onOpenTranscript ? 8 : 0 }}>{a.quality_notes}</div>
-                  {onOpenTranscript && (
-                    <button
-                      onClick={() => onOpenTranscript(a.filename)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}
-                    >
-                      Vedi trascrizione →
-                    </button>
-                  )}
-                </div>
-              ))
+                ))}
+                {totalPages > 1 && (
+                  <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="tabular" style={{ fontSize: 12, color: 'var(--text3)' }}>
+                      {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, analyses.length)} di {analyses.length}
+                    </span>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <button onClick={() => setPage(Math.max(0, safePage - 1))} disabled={safePage === 0}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: safePage === 0 ? 'var(--text3)' : 'var(--text)', fontSize: 12, cursor: safePage === 0 ? 'not-allowed' : 'pointer' }}>← Prec</button>
+                      <span className="tabular" style={{ padding: '5px 12px', fontSize: 12, color: 'var(--text2)' }}>{safePage + 1} / {totalPages}</span>
+                      <button onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))} disabled={safePage >= totalPages - 1}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: safePage >= totalPages - 1 ? 'var(--text3)' : 'var(--text)', fontSize: 12, cursor: safePage >= totalPages - 1 ? 'not-allowed' : 'pointer' }}>Succ →</button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </>
