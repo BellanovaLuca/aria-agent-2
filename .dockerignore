@@ -1,0 +1,16 @@
+.git
+.github
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/node_modules
+frontend/dist
+**/qdrant_data
+services/*/db.json
+services/*/tickets.json
+services/*/analyses.json
+transcripts
+.venv
+venv
+.env
+docs

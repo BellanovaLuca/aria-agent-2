@@ -61,7 +61,10 @@ export function CallPanel() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const cleanup = () => {
+    // Rimuove davvero l'elemento <audio> dal DOM: il solo pause() lasciava un
+    // nodo orfano appeso a document.body a ogni chiamata.
     audioRef.current?.pause()
+    audioRef.current?.remove()
     audioRef.current = null
     roomRef.current  = null
     setAgentStatus('waiting')
@@ -119,6 +122,9 @@ export function CallPanel() {
     } catch (e: unknown) {
       setErrorMsg(e instanceof Error ? e.message : 'Connessione fallita')
       setState('error')
+      // Se connect() è andato a buon fine ma poi il mic ha fallito, la room
+      // resterebbe connessa e orfana (mic attivo): la chiudiamo esplicitamente.
+      room.disconnect()
       roomRef.current = null
     }
   }

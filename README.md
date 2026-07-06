@@ -1,5 +1,7 @@
 # Aria Agent
 
+[![CI](https://github.com/BellanovaLuca/aria-agent-2/actions/workflows/ci.yml/badge.svg)](https://github.com/BellanovaLuca/aria-agent-2/actions/workflows/ci.yml)
+
 Piattaforma open-source per costruire **agenti AI multicanale** con voce, email e interfaccia web. Il progetto include un'implementazione di riferimento ma l'architettura è progettata per essere adattata a qualsiasi caso d'uso conversazionale.
 
 L'assistente "Sofia" gestisce tre tipi di richieste: **reset password**, **sblocco utenza** (con verifica d'identità) e **domande IT** — a queste ultime risponde attingendo a una **knowledge base** (RAG) costruita sui documenti aziendali caricati dalla dashboard. È raggiungibile su **tre canali** che condividono gli stessi strumenti e la stessa logica: **voce** (telefono/WebRTC via Gemini Live), **email** (processing asincrono) e **chat testuale** (widget nella dashboard, via Gemini con function calling).
@@ -473,7 +475,22 @@ INTERNAL_API_KEY=your_internal_api_key
 
 ## Avvio e arresto
 
-### Avvio completo
+### Avvio con Docker (consigliato)
+
+L'intero stack applicativo (6 microservizi + email processor + dashboard) parte
+con un comando. Serve solo il file `.env` con `INTERNAL_API_KEY` e `GOOGLE_API_KEY`:
+
+```bash
+docker compose up --build
+# Dashboard → http://localhost:5175
+```
+
+La dashboard è servita da nginx, che fa da reverse-proxy verso i servizi e
+inietta la chiave interna (il browser non la vede mai). Lo stato (utenti, ticket,
+analisi, indice Qdrant) persiste in volumi Docker. Il **canale voce** non è
+incluso (richiede LiveKit/Twilio esterni): avvialo a parte con `run_all.sh`.
+
+### Avvio completo (senza Docker)
 
 ```bash
 ./scripts/run_all.sh

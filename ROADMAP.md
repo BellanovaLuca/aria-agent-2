@@ -56,8 +56,11 @@ Messa in sicurezza della base prima di ogni evoluzione.
 
 ## Fasi candidate
 
-### A — Robustezza e qualità *(in corso)*
-Consolidamento: fix dei bug frontend noti (leak `<audio>` in CallPanel, "X" del DatePicker, errori di rete silenziati), rimozione di codice morto, **ESLint/Prettier + test frontend**, **CI GitHub Actions**, **Docker Compose** per avviare lo stack con un comando.
+### A — Robustezza e qualità ✅
+- Fix dei bug frontend noti (leak `<audio>` in CallPanel, "X" del DatePicker, errori di rete silenziati) e rimozione di codice morto.
+- **ESLint + Prettier** configurati, **vitest** con test su `utils`.
+- **CI GitHub Actions**: pytest dei servizi + lint/test/build del frontend a ogni push/PR.
+- **Docker Compose**: `docker compose up --build` avvia l'intero stack (6 servizi + email processor + dashboard nginx); stato su volumi persistenti.
 
 ### B — Nuove funzionalità dell'agente
 Verifica identità con **OTP**, **chiamate outbound** (l'agente richiama), **voicemail + callback**, **multi-persona** (registry di configurazioni per più casi d'uso/clienti).

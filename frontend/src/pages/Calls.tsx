@@ -38,7 +38,8 @@ function highlight(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text
   const q = query.toLowerCase()
   const parts: React.ReactNode[] = []
-  let lower = text.toLowerCase(), last = 0, idx = lower.indexOf(q)
+  const lower = text.toLowerCase()
+  let last = 0, idx = lower.indexOf(q)
   while (idx !== -1) {
     if (idx > last) parts.push(text.slice(last, idx))
     parts.push(<mark key={idx} style={{ background: 'var(--accent)', color: '#000', borderRadius: 2, padding: '0 1px' }}>{text.slice(idx, idx + query.length)}</mark>)

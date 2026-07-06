@@ -285,9 +285,13 @@ export function DatePicker({ value, onChange, placeholder = 'Filtra per data…'
       >
         <span>{displayLabel}</span>
         {value ? (
-          /* Clear button — separate element outside the trigger button (sibling, not child) */
+          /* Clear "X": stopPropagation evita che il click apra il calendario */
           <span
-            aria-label="Rimuovi data"
+            role="button"
+            tabIndex={0}
+            aria-label="Rimuovi filtro data"
+            onClick={handleClear}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClear(e) }}
             style={{ color: 'var(--text3)', display: 'flex', padding: '0 2px', cursor: 'pointer' }}
           >
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="11" height="11">
@@ -300,19 +304,6 @@ export function DatePicker({ value, onChange, placeholder = 'Filtra per data…'
           </svg>
         )}
       </button>
-
-      {/* Clear button sits outside the main trigger to avoid nested button issue */}
-      {value && (
-        <button
-          type="button"
-          aria-label="Rimuovi filtro data"
-          onClick={handleClear}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClear(e) }}
-          style={{
-            position: 'absolute', display: 'none', /* positioned in parent if needed */
-          }}
-        />
-      )}
 
       {open && createPortal(
         <div

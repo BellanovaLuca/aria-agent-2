@@ -456,9 +456,11 @@ export function Dashboard({ addToast }: Props) {
     try {
       const h = await apiGet<ResetHistoryEntry[]>('/api/reset-history')
       setHistory(h ?? [])
-    } catch { /* silent */ }
+    } catch (e: unknown) {
+      if (showSpinner) addToast('error', `Caricamento cronologia fallito: ${e instanceof Error ? e.message : e}`)
+    }
     finally { if (showSpinner) setLoading(false) }
-  }, [])
+  }, [addToast])
 
   useEffect(() => {
     load(true)
@@ -496,9 +498,9 @@ export function Dashboard({ addToast }: Props) {
     let voice = 0, email = 0, chat = 0, success = 0
     let voiceOk = 0, voiceFail = 0, emailOk = 0, emailFail = 0, chatOk = 0, chatFail = 0
     for (const e of history) {
-      if (e.channel === 'chat')       { chat++;  e.success ? chatOk++  : chatFail++ }
-      else if (e.channel === 'email') { email++; e.success ? emailOk++ : emailFail++ }
-      else                            { voice++; e.success ? voiceOk++ : voiceFail++ }
+      if (e.channel === 'chat')       { chat++;  if (e.success) chatOk++;  else chatFail++ }
+      else if (e.channel === 'email') { email++; if (e.success) emailOk++; else emailFail++ }
+      else                            { voice++; if (e.success) voiceOk++; else voiceFail++ }
       if (e.success) success++
     }
     return {

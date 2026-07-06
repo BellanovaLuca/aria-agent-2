@@ -1,0 +1,50 @@
+# Reverse proxy verso i microservizi (mirror del proxy Vite) con iniezione
+# della chiave interna. Solo ${INTERNAL_API_KEY} è sostituita all'avvio.
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass http://user_service:8001;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /email/ {
+        rewrite ^/email/(.*)$ /$1 break;
+        proxy_pass http://email_service:8002;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /knowledge/ {
+        rewrite ^/knowledge/(.*)$ /$1 break;
+        proxy_pass http://knowledge_service:8003;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /chat/ {
+        rewrite ^/chat/(.*)$ /$1 break;
+        proxy_pass http://chat_service:8004;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /tickets {
+        proxy_pass http://ticket_service:8005;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /analytics/ {
+        rewrite ^/analytics/(.*)$ /$1 break;
+        proxy_pass http://analytics_service:8006;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /transcripts {
+        proxy_pass http://user_service:8001;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+    location /token {
+        proxy_pass http://user_service:8001;
+        proxy_set_header X-Internal-Api-Key "${INTERNAL_API_KEY}";
+    }
+}

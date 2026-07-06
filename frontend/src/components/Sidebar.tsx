@@ -277,21 +277,6 @@ export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount,
               })}
             </div>
           )}
-
-          {!isCollapsed && (
-            <button
-              disabled
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                padding: '7px 20px', borderRadius: 8,
-                color: 'var(--text3)', fontSize: 13, fontWeight: 400,
-                cursor: 'default', border: '1px solid transparent', background: 'transparent',
-                opacity: 0.5,
-              }}
-            >
-              + Nuovo modulo
-            </button>
-          )}
         </div>
 
         <div style={{ height: 1, background: 'var(--border)', margin: '8px 4px 8px' }} />

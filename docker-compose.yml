@@ -1,0 +1,107 @@
+# Stack applicativo Aria Agent (canali email + chat + dashboard) con un comando.
+#
+#   docker compose up --build
+#   → dashboard su http://localhost:5175
+#
+# Legge INTERNAL_API_KEY e GOOGLE_API_KEY dal file .env nella radice del repo.
+# Il canale voce (voice_agent) NON è incluso: richiede LiveKit/Twilio esterni;
+# avvialo a parte con lo script di sviluppo.
+name: aria-agent
+
+x-svc-env: &svc-env
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?definisci INTERNAL_API_KEY nel .env}
+  GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+  USER_SERVICE_URL: http://user_service:8001
+  EMAIL_SERVICE_URL: http://email_service:8002
+  KNOWLEDGE_SERVICE_URL: http://knowledge_service:8003
+  CHAT_SERVICE_URL: http://chat_service:8004
+  TICKET_SERVICE_URL: http://ticket_service:8005
+  ANALYTICS_SERVICE_URL: http://analytics_service:8006
+  AGENT_EMAIL: ${AGENT_EMAIL:-agent@aria.local}
+
+services:
+  user_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: user_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8001
+    environment:
+      <<: *svc-env
+      USER_DB_PATH: /data/db.json
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+    volumes: ["user_data:/data"]
+    ports: ["8001:8001"]
+
+  email_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: email_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8002
+    environment: *svc-env
+    ports: ["8002:8002"]
+
+  knowledge_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: knowledge_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8003
+    environment:
+      <<: *svc-env
+      QDRANT_PATH: /data/qdrant_data
+    volumes: ["knowledge_data:/data"]
+    ports: ["8003:8003"]
+
+  chat_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: chat_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8004
+    environment:
+      <<: *svc-env
+      CHAT_MODEL: ${CHAT_MODEL:-gemini-2.5-flash}
+    ports: ["8004:8004"]
+
+  ticket_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: ticket_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8005
+    environment:
+      <<: *svc-env
+      TICKETS_DB_PATH: /data/tickets.json
+    volumes: ["ticket_data:/data"]
+    ports: ["8005:8005"]
+
+  analytics_service:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: analytics_service } }
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8006
+    environment:
+      <<: *svc-env
+      ANALYSES_DB_PATH: /data/analyses.json
+      ANALYSIS_MODEL: ${ANALYSIS_MODEL:-gemini-2.5-flash}
+      TRANSCRIPTS_DIR: /transcripts
+    volumes:
+      - analytics_data:/data
+      - ./transcripts:/transcripts:ro
+    ports: ["8006:8006"]
+
+  email_processor:
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: email_processor } }
+    command: python processor.py
+    environment:
+      <<: *svc-env
+      EMAIL_POLL_INTERVAL: ${EMAIL_POLL_INTERVAL:-10}
+    depends_on: [user_service, email_service]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?definisci INTERNAL_API_KEY nel .env}
+    ports: ["5175:80"]
+    depends_on:
+      - user_service
+      - email_service
+      - knowledge_service
+      - chat_service
+      - ticket_service
+      - analytics_service
+
+volumes:
+  user_data:
+  knowledge_data:
+  ticket_data:
+  analytics_data:

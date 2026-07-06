@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiGet, apiPost } from '../hooks/useApi'
 import { ScrollToTop } from '../components/ScrollToTop'
 import { IcRefresh, IcStar, IcSparkles } from '../components/icons'
-import { fmtTs } from '../utils'
 import type { TranscriptAnalysis, AnalyticsSummary, ToastItem } from '../types'
 
 interface Props {

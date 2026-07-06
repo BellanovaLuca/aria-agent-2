@@ -243,6 +243,15 @@ dialog::backdrop {
   animation: sectionIn 0.24s ease-out both;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out both;
+}
+
 /* ── Reduced-motion — catch-all ───────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

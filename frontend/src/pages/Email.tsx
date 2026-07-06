@@ -61,10 +61,12 @@ export function Email({ addToast }: Props) {
       ])
       setInbox(i ?? [])
       setSent(s ?? [])
-    } catch { /* silent */ } finally {
+    } catch (e: unknown) {
+      if (showSpinner) addToast('error', `Caricamento email fallito: ${e instanceof Error ? e.message : e}`)
+    } finally {
       if (showSpinner) setLoading(false)
     }
-  }, [])
+  }, [addToast])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
