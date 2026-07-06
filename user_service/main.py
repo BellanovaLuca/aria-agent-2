@@ -311,7 +311,9 @@ def reset_password(body: ResetRequest):
     entry = _make_history_entry(username, body.channel, True, msg)
     reset_history.append(entry)
     _save_db()
-    if body.channel == "voice":
+    # Voce e chat non mostrano la password: la recapita il User Service via email.
+    # Il canale email è invece gestito dall'Email Processor, che compone la risposta.
+    if body.channel in ("voice", "chat"):
         _send_password_email(user, new_pwd)
     return ResetResult(success=True, username=username, message=msg, new_password=new_pwd)
 
@@ -429,7 +431,7 @@ def unlock_account(body: UnlockRequest):
     msg = "Utenza sbloccata con successo."
     reset_history.append(_make_history_entry(username, body.channel, True, msg, "unlock"))
     _save_db()
-    if body.channel == "voice":
+    if body.channel in ("voice", "chat"):
         _send_unlock_email(user)
     return UnlockResult(success=True, username=username, message=msg)
 

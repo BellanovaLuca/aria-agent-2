@@ -23,10 +23,14 @@ class User(BaseModel):
     created_at: datetime
 
 
+# Canali da cui può arrivare una richiesta (per le metriche del frontend).
+Channel = Literal["voice", "email", "chat"]
+
+
 class ResetRequest(BaseModel):
     """Payload per richiedere il reset della password di un utente."""
     username: str
-    channel: Literal["voice", "email"]  # traccia il canale di origine per le metriche
+    channel: Channel  # traccia il canale di origine per le metriche
 
 
 class ResetResult(BaseModel):
@@ -44,7 +48,7 @@ class UnlockRequest(BaseModel):
     """
     username: str
     full_name: str
-    channel: Literal["voice", "email"]
+    channel: Channel
 
 
 class UnlockResult(BaseModel):
@@ -62,7 +66,7 @@ class ResetHistoryEntry(BaseModel):
     """
     id: str
     username: str
-    channel: Literal["voice", "email"]
+    channel: Channel
     operation: Literal["reset", "unlock"] = "reset"
     success: bool
     message: str
