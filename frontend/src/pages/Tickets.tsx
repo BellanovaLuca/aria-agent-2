@@ -48,6 +48,12 @@ export function Tickets({ addToast }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  // Animazioni cambio stato: flash sulla riga e uscita dal filtro.
+  const [flash, setFlash] = useState<Set<string>>(new Set())
+  const [pendingExit, setPendingExit] = useState<Set<string>>(new Set())
+  const [leaving, setLeaving] = useState<Set<string>>(new Set())
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async (spinner = false) => {
@@ -90,7 +96,41 @@ export function Tickets({ addToast }: Props) {
     patch(number, { note: text, author: 'operatore' }, 'Nota aggiunta.')
   }, [noteDraft, patch])
 
-  const shown = filter === 'all' ? tickets : tickets.filter(t => t.status === filter)
+  const without = (s: Set<string>, id: string) => { const n = new Set(s); n.delete(id); return n }
+
+  // Cambio stato con animazione: aggiorna subito lo stato (flash sulla riga);
+  // se un filtro è attivo e il nuovo stato non vi rientra più, la riga viene
+  // mostrata ancora per un istante, poi esce con un'animazione e sparisce.
+  const changeStatus = useCallback(async (t: Ticket, newStatus: Ticket['status']) => {
+    if (busy === t.number || t.status === newStatus) return
+    setBusy(t.number)
+    setTickets(list => list.map(x => (x.number === t.number ? { ...x, status: newStatus } : x)))
+    setFlash(s => new Set(s).add(t.number))
+    try {
+      await apiPatch(`/tickets/${t.number}`, { status: newStatus })
+      addToast('success', `${t.number} → ${STATUS_META[newStatus].label}`)
+    } catch (e: unknown) {
+      addToast('error', `Errore: ${e instanceof Error ? e.message : e}`)
+      load(false) // ripristina lo stato reale dal server
+      setBusy(null)
+      return
+    }
+    setBusy(null)
+    setTimeout(() => { if (mountedRef.current) setFlash(s => without(s, t.number)) }, 800)
+
+    if (filter !== 'all' && newStatus !== filter) {
+      setExpanded(x => (x === t.number ? null : x))
+      setPendingExit(s => new Set(s).add(t.number)) // resta visibile durante l'animazione
+      setTimeout(() => { if (mountedRef.current) setLeaving(s => new Set(s).add(t.number)) }, 650)
+      setTimeout(() => {
+        if (!mountedRef.current) return
+        setLeaving(s => without(s, t.number))
+        setPendingExit(s => without(s, t.number))
+      }, 650 + 450)
+    }
+  }, [busy, filter, addToast, load])
+
+  const shown = tickets.filter(t => filter === 'all' || t.status === filter || pendingExit.has(t.number))
   const openCount = tickets.filter(t => t.status === 'new' || t.status === 'in_progress').length
 
   return (
@@ -141,8 +181,9 @@ export function Tickets({ addToast }: Props) {
         ) : (
           shown.map((t) => {
             const isOpen = expanded === t.number
+            const cls = leaving.has(t.number) ? 'ticket-leaving' : flash.has(t.number) ? 'ticket-flash' : ''
             return (
-              <div key={t.number} style={{ borderBottom: '1px solid var(--border)' }}>
+              <div key={t.number} className={cls} style={{ borderBottom: '1px solid var(--border)' }}>
                 <button
                   onClick={() => setExpanded(isOpen ? null : t.number)}
                   aria-expanded={isOpen}
@@ -184,7 +225,7 @@ export function Tickets({ addToast }: Props) {
                       <span style={{ fontSize: 12, color: 'var(--text3)' }}>Cambia stato:</span>
                       {(['in_progress', 'resolved', 'closed'] as const).map(s => (
                         <button key={s} disabled={busy === t.number || t.status === s}
-                          onClick={() => patch(t.number, { status: s }, `Ticket ${t.number} → ${STATUS_META[s].label}`)}
+                          onClick={() => changeStatus(t, s)}
                           style={{
                             padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                             cursor: busy === t.number || t.status === s ? 'default' : 'pointer',

@@ -252,6 +252,24 @@ dialog::backdrop {
   animation: fadeIn 0.2s ease-out both;
 }
 
+/* Cambio stato ticket: flash sulla riga, poi (se esce dal filtro) uscita fluida */
+@keyframes ticketFlash {
+  0%   { background: var(--accent-dim); }
+  100% { background: transparent; }
+}
+.ticket-flash { animation: ticketFlash 0.8s ease; }
+
+@keyframes ticketLeave {
+  0%   { opacity: 1; max-height: 200px; }
+  50%  { opacity: 0; transform: translateX(24px); }
+  100% { opacity: 0; max-height: 0; transform: translateX(24px);
+         padding-top: 0; padding-bottom: 0; border-width: 0; }
+}
+.ticket-leaving {
+  animation: ticketLeave 0.45s ease forwards;
+  overflow: hidden;
+}
+
 /* ── Reduced-motion — catch-all ───────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
