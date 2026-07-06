@@ -69,7 +69,7 @@ class KnowledgeStore:
 
     # ── Scrittura ──────────────────────────────────────────────────────────
 
-    def add_document(self, filename: str, chunks: list[Chunk]) -> DocumentMeta:
+    def add_document(self, filename: str, chunks: list[Chunk], full_text: str = "") -> DocumentMeta:
         """Indicizza i chunk di un documento e ne restituisce i metadati.
 
         Solleva ValueError se il documento non contiene testo indicizzabile.
@@ -81,6 +81,8 @@ class KnowledgeStore:
         uploaded_at = datetime.now(timezone.utc).isoformat()
         vectors = self.embed_fn([c.text for c in chunks], "RETRIEVAL_DOCUMENT")
 
+        # Il testo originale (con la formattazione) è salvato sul primo chunk,
+        # così la visualizzazione del documento resta fedele all'originale.
         points = [
             models.PointStruct(
                 id=uuid.uuid4().hex,
@@ -92,6 +94,7 @@ class KnowledgeStore:
                     "chunk_count": len(chunks),
                     "uploaded_at": uploaded_at,
                     "text": chunk.text,
+                    "full_text": full_text if chunk.index == 0 else "",
                 },
             )
             for chunk, vector in zip(chunks, vectors)
@@ -168,11 +171,18 @@ class KnowledgeStore:
         if not payloads:
             return None
         ordered = sorted(payloads, key=lambda p: p.get("chunk_index", 0))
+        filename = ordered[0].get("filename", "(sconosciuto)")
+        # Preferisci il testo originale (con formattazione) salvato all'upload.
+        full = ordered[0].get("full_text") or ""
+        if full:
+            return filename, full
+        # Fallback per documenti indicizzati prima di questo campo: ricostruisci
+        # dai chunk togliendo l'overlap (la formattazione va persa).
         words: list[str] = []
         for i, p in enumerate(ordered):
             w = p.get("text", "").split()
             words.extend(w if i == 0 else w[OVERLAP_WORDS:])
-        return ordered[0].get("filename", "(sconosciuto)"), " ".join(words)
+        return filename, " ".join(words)
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
         """Restituisce i chunk più rilevanti per la query, ordinati per score."""

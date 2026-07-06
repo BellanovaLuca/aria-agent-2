@@ -12,6 +12,35 @@ interface Props {
 
 const ACCEPT = '.pdf,.md,.txt'
 
+/* Rendering markdown leggero (titoli, elenchi, grassetto) per la vista documento */
+function renderInline(text: string): React.ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    p.startsWith('**') && p.endsWith('**')
+      ? <strong key={i} style={{ color: 'var(--text)' }}>{p.slice(2, -2)}</strong>
+      : <span key={i}>{p}</span>,
+  )
+}
+
+function MarkdownView({ text }: { text: string }) {
+  const lines = text.replace(/\r/g, '').split('\n')
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {lines.map((raw, i) => {
+        const t = raw.trimEnd()
+        if (!t.trim()) return <div key={i} style={{ height: 6 }} />
+        if (t.startsWith('### ')) return <div key={i} style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginTop: 6 }}>{renderInline(t.slice(4))}</div>
+        if (t.startsWith('## ')) return <div key={i} style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', marginTop: 10 }}>{renderInline(t.slice(3))}</div>
+        if (t.startsWith('# ')) return <div key={i} style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>{renderInline(t.slice(2))}</div>
+        const bullet = t.match(/^\s*[-*]\s+(.*)/)
+        if (bullet) return <div key={i} style={{ display: 'flex', gap: 8, paddingLeft: 6 }}><span style={{ color: 'var(--accent)' }}>•</span><span style={{ flex: 1 }}>{renderInline(bullet[1])}</span></div>
+        const numbered = t.match(/^\s*(\d+)\.\s+(.*)/)
+        if (numbered) return <div key={i} style={{ display: 'flex', gap: 8, paddingLeft: 6 }}><span style={{ color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>{numbered[1]}.</span><span style={{ flex: 1 }}>{renderInline(numbered[2])}</span></div>
+        return <div key={i}>{renderInline(t)}</div>
+      })}
+    </div>
+  )
+}
+
 export function Knowledge({ addToast }: Props) {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([])
   const [loading, setLoading] = useState(true)
@@ -273,8 +302,8 @@ export function Knowledge({ addToast }: Props) {
                         <div className="w-4 h-4 border-2 border-gh-blue border-t-transparent rounded-full animate-spin" /> Caricamento contenuto…
                       </div>
                     ) : (
-                      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', maxHeight: 360, overflowY: 'auto', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {content[d.id] || '(nessun testo estraibile)'}
+                      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px', maxHeight: 380, overflowY: 'auto', fontSize: 13, color: 'var(--text2)', lineHeight: 1.55, wordBreak: 'break-word' }}>
+                        {content[d.id] ? <MarkdownView text={content[d.id]} /> : '(nessun testo estraibile)'}
                       </div>
                     )}
                   </div>

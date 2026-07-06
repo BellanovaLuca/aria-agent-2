@@ -163,7 +163,7 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentOut:
         raise HTTPException(status_code=400, detail="Il documento non contiene testo estraibile.")
 
     try:
-        meta = get_store().add_document(filename, chunks)
+        meta = get_store().add_document(filename, chunks, full_text=text)
     except Exception as exc:  # embedding o Qdrant non disponibili
         log.exception("Indicizzazione fallita per %s", filename)
         raise HTTPException(status_code=502, detail="Indicizzazione non riuscita, riprova.") from exc
