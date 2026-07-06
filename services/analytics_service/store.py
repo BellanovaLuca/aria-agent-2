@@ -22,7 +22,9 @@ def label_for(filename: str) -> str:
         return filename
     date_str, time_str, room = m.groups()
     date_label = f"{date_str[6:]}/{date_str[4:6]}/{date_str[:4]} {time_str[:2]}:{time_str[2:4]}"
-    channel = "🌐 Web" if "web-" in room else "📞 Telefono"
+    # Nessuna emoji nel canale: il frontend mostra un'icona monocromatica
+    # coerente con il resto dell'app, ricavando il canale dal nome file.
+    channel = "Web" if "web-" in room else "Telefono"
     return f"{channel} — {date_label}"
 
 

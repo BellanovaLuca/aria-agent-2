@@ -1,54 +1,24 @@
 #!/bin/bash
-# stop_all.sh — ferma tutti i processi del sistema Password Reset Agent.
+# stop_all.sh — ferma l'intero stack Aria Agent avviato con run_all.sh.
 #
-# Termina in ordine inverso rispetto a run_all.sh:
-#   1. Frontend React (Vite)
-#   2. Voice Agent
-#   3. Email Processor
-#   4. Email Service
-#   5. User Service
-#
-# Sicuro da eseguire anche se alcuni processi non sono in esecuzione.
+# Wrapper di `docker compose down`: arresta e rimuove i container dello stack.
+# I dati restano nei volumi Docker (utenti, knowledge base, ticket, analisi):
+# al successivo run_all.sh li ritrovi. Per cancellare anche i dati: `docker
+# compose down -v`.
 
-echo "Arresto del sistema Password Reset Agent..."
-echo ""
+set -e
 
-_kill() {
-  local name="$1"
-  local pattern="$2"
-  local pids
-  pids=$(pgrep -f "$pattern" 2>/dev/null)
-  if [ -n "$pids" ]; then
-    echo "  Fermando $name (PID: $pids)..."
-    kill $pids 2>/dev/null
-    sleep 1
-    # SIGKILL se ancora in esecuzione dopo SIGTERM
-    pids=$(pgrep -f "$pattern" 2>/dev/null)
-    [ -n "$pids" ] && kill -9 $pids 2>/dev/null
-    echo "  $name fermato."
-  else
-    echo "  $name non era in esecuzione."
-  fi
-}
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-_kill "Frontend React"      "vite --port 5175"
-_kill "Voice Agent"         "voice_agent/agent.py"
-_kill "Email Processor"     "email_processor/processor.py"
-_kill "Analytics Service"   "uvicorn main:app.*8006"
-_kill "Ticket Service"      "uvicorn main:app.*8005"
-_kill "Chat Service"        "uvicorn main:app.*8004"
-_kill "Knowledge Service"   "uvicorn main:app.*8003"
-_kill "Email Service"       "uvicorn main:app.*8002"
-_kill "User Service"        "uvicorn main:app.*8001"
+if ! docker compose version >/dev/null 2>&1; then
+  echo "Errore: Docker Compose non disponibile."
+  exit 1
+fi
 
-# Pulizia residua: qualsiasi processo rimasto sulle porte dei servizi
-for port in 8001 8002 8003 8004 8005 8006 5175; do
-  pid=$(lsof -ti tcp:$port 2>/dev/null)
-  if [ -n "$pid" ]; then
-    echo "  Processo residuo su porta $port (PID: $pid) — terminato."
-    kill $pid 2>/dev/null
-  fi
-done
+echo "=== Arresto dello stack Aria Agent (Docker Compose) ==="
+docker compose down
 
 echo ""
-echo "Sistema fermato. Per riavviare: ./run_all.sh"
+echo "Stack fermato. I dati restano nei volumi Docker."
+echo "Per riavviare: ./scripts/run_all.sh"

@@ -69,6 +69,9 @@ log = logging.getLogger("user_service")
 _LIVEKIT_URL = os.getenv("LIVEKIT_URL", "")
 _LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "")
 _LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
+# Nome dell'agente LiveKit (dispatch esplicito). Deve coincidere con l'agent_name
+# del worker voce; il token della chiamata web lo richiede nella room.
+_LIVEKIT_AGENT_NAME = os.getenv("LIVEKIT_AGENT_NAME", "aria-support")
 
 # Email Service per il recapito delle password temporanee (reset da canale voce)
 _EMAIL_SERVICE_URL = os.getenv("EMAIL_SERVICE_URL", "http://localhost:8002")
@@ -512,6 +515,14 @@ def get_webrtc_token():
         .with_identity("user-web")
         .with_name("Utente Web")
         .with_grants(VideoGrants(room_join=True, room=room_name))
+        # Dispatch ESPLICITO dell'agente: quando il browser entra nella room,
+        # LiveKit dispatcha il worker "aria-support" (il dispatch automatico non
+        # consegnava i job, così Sofia non entrava). Coerente con la SIP dispatch rule.
+        .with_room_config(
+            lk_api.RoomConfiguration(
+                agents=[lk_api.RoomAgentDispatch(agent_name=_LIVEKIT_AGENT_NAME)]
+            )
+        )
         .to_jwt()
     )
     return {"token": token, "url": _LIVEKIT_URL, "room": room_name}

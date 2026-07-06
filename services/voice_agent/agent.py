@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -55,6 +56,13 @@ TRANSCRIPTS_DIR.mkdir(exist_ok=True)
 
 AGENT_NAME = "Sofia"
 
+# Nome con cui il worker si registra per il DISPATCH ESPLICITO su LiveKit.
+# Ogni room (web e SIP) richiede esplicitamente questo agente: il dispatch
+# automatico di LiveKit Cloud non consegnava i job a questo worker, quindi
+# Sofia non entrava mai in chiamata. Deve coincidere con l'agent_name usato
+# in user_service (/token) e nella dispatch rule SIP.
+DISPATCH_NAME = os.getenv("LIVEKIT_AGENT_NAME", "aria-support")
+
 INSTRUCTIONS = f"""
 Sei {AGENT_NAME}, l'assistente vocale del servizio IT aziendale.
 Non sei un robot: sei una persona gentile, paziente e competente che aiuta i colleghi
@@ -94,9 +102,13 @@ Puoi aiutare con TRE tipi di richieste, ognuna con il suo strumento:
 4. TICKET DI SUPPORTO — quando non puoi risolvere tu (richiesta fuori dai tre
    ambiti sopra, oppure la knowledge base non ha la risposta, oppure l'utente
    lo chiede), proponi di aprire un ticket. Se l'utente accetta, chiama IN
-   SILENZIO open_support_ticket con un oggetto e una descrizione chiari, poi
-   comunica il numero del ticket. Se l'utente chiede a che punto è la sua
-   richiesta e ti dà un numero (es. INC0001001), chiama check_ticket_status.
+   SILENZIO open_support_ticket ricavando tu stessa oggetto e descrizione da
+   quanto emerso nella conversazione: NON chiedere all'utente di dettarti
+   l'oggetto o la descrizione del ticket. Chiedi ulteriori informazioni SOLO se
+   ti manca un dettaglio essenziale per descrivere bene il problema (es. da
+   quando accade, un messaggio d'errore). Poi comunica il numero del ticket. Se
+   l'utente chiede a che punto è la sua richiesta e ti dà un numero (es.
+   INC0001001), chiama check_ticket_status.
 
 Regole trasversali:
 - NON pronunciare frasi di attesa prima di chiamare un tool ("Verifico", "Un momento"…):
@@ -249,4 +261,4 @@ if __name__ == "__main__":
     # num_idle_processes=1: mantiene sempre un processo figlio pre-avviato e pronto.
     # Senza di questo, ogni chiamata parte "fredda" e rischia il timeout di connessione
     # a LiveKit Cloud prima che il processo riesca ad unirsi alla room.
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, num_idle_processes=1))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, agent_name=DISPATCH_NAME, num_idle_processes=1))

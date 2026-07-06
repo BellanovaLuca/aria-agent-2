@@ -26,8 +26,14 @@ conversazione tra un assistente IT ("AGENTE") e un utente ("UTENTE") e la analiz
 in modo oggettivo. Rispondi SOLO con il JSON richiesto, in italiano.
 
 - summary: riassunto in una frase di cosa ha chiesto l'utente e com'è andata.
-- outcome: "risolto" se la richiesta è stata evasa, "non_risolto" se no,
-  "escalation" se è stata rimandata a un operatore o al supporto.
+- outcome: "escalation" se la conversazione è stata passata a un operatore umano.
+  Questo vale in due casi: (a) l'utente ha chiesto esplicitamente di parlare con
+  un operatore / una persona; (b) dalla trascrizione risulta un handoff a un
+  umano — un operatore o un collega del supporto è entrato in linea per gestire
+  la richiesta (es. l'agente annuncia che "un collega è appena entrato in linea",
+  oppure compare una riga di handoff a operatore). Altrimenti: "risolto" se la
+  richiesta dell'utente è stata evasa, "non_risolto" se non lo è stata.
+  L'apertura di un ticket, da sola, NON è escalation.
 - sentiment: umore prevalente dell'utente ("positivo", "neutro", "negativo").
 - intent: motivo principale del contatto ("reset_password", "sblocco",
   "domanda" per una domanda informativa, "altro").
