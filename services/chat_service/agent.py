@@ -60,7 +60,8 @@ Puoi aiutare con TRE tipi di richieste, ognuna con il suo strumento:
    rispondere MAI a una domanda IT dalla tua conoscenza generale senza aver
    prima consultato lo strumento.
    - RISPONDI SOLO con le informazioni contenute nei passaggi restituiti.
-     Non inventare procedure. Cita il documento da cui proviene l'informazione.
+     Non inventare procedure. NON menzionare da quale documento o fonte proviene
+     l'informazione: riferisci la risposta in modo naturale, come se la sapessi.
    - Se non ci sono passaggi, dillo con onestà e proponi il supporto; non
      ripiegare sulla tua conoscenza generale.
 
@@ -190,6 +191,9 @@ def _config() -> types.GenerateContentConfig:
         system_instruction=CHAT_INSTRUCTIONS,
         tools=_TOOLS,
         temperature=0.7,
+        # Disabilita il "thinking" del modello: per l'instradamento dei tool e
+        # le risposte di supporto non serve, e dimezza la latenza per turno.
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
 
 
@@ -235,7 +239,10 @@ async def generate_reply(
     resp = await client.aio.models.generate_content(
         model=CHAT_MODEL,
         contents=working,
-        config=types.GenerateContentConfig(system_instruction=CHAT_INSTRUCTIONS, temperature=0.5),
+        config=types.GenerateContentConfig(
+            system_instruction=CHAT_INSTRUCTIONS, temperature=0.5,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+        ),
     )
     if resp.candidates and resp.candidates[0].content:
         working.append(resp.candidates[0].content)
