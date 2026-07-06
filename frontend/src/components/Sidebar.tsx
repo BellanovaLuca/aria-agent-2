@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { IcDashboard, IcEmailIcon, IcPhone, IcUsers, IcBook, IcHeadset, IcTicket, IcChart } from './icons'
+import { IcKey, IcEmailIcon, IcPhone, IcUsers, IcBook, IcHeadset, IcTicket, IcChart } from './icons'
 import type { Page } from '../types'
 
 interface Props {
@@ -18,16 +18,14 @@ interface NavItemDef { page: Page; label: string }
 interface NavGroup { id: string; label: string; items: NavItemDef[] }
 
 const NAV_GROUPS: NavGroup[] = [
-  { id: 'reset', label: 'Reset Password', items: [
-    { page: 'dashboard', label: 'Dashboard' },
-    { page: 'email', label: 'Email' },
-  ] },
   { id: 'conversazioni', label: 'Conversazioni', items: [
+    { page: 'email', label: 'Email' },
     { page: 'calls', label: 'Chiamate' },
     { page: 'live', label: 'Chiamate Live' },
     { page: 'analytics', label: 'Analisi' },
   ] },
   { id: 'supporto', label: 'Supporto', items: [
+    { page: 'dashboard', label: 'Monitoraggio Reset' },
     { page: 'knowledge', label: 'Knowledge' },
     { page: 'tickets', label: 'Ticket' },
   ] },
@@ -42,7 +40,7 @@ const GROUP_OF: Record<string, string> = Object.fromEntries(
 
 function iconFor(page: Page, size = 15): React.ReactNode {
   switch (page) {
-    case 'dashboard': return <IcDashboard size={size} />
+    case 'dashboard': return <IcKey size={size} />
     case 'analytics': return <IcChart size={size} />
     case 'email':     return <IcEmailIcon size={size} />
     case 'calls':     return <IcPhone size={size} />
