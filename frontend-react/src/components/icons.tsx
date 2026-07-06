@@ -127,6 +127,32 @@ export function IcChat({ size = 15 }: { size?: number }) {
   )
 }
 
+export function IcChart({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M3 3v13a1 1 0 001 1h13"/>
+      <path d="M6.5 12l3-3.5 2.5 2 3.5-4.5"/>
+    </svg>
+  )
+}
+
+export function IcSparkles({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M10 3l1.6 3.8L15.5 8l-3.9 1.2L10 13l-1.6-3.8L4.5 8l3.9-1.2z"/>
+      <path d="M15.5 12.5l.7 1.6 1.6.6-1.6.6-.7 1.7-.7-1.7-1.6-.6 1.6-.6z"/>
+    </svg>
+  )
+}
+
+export function IcStar({ size = 14, filled = true }: { size?: number; filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" width={size} height={size}>
+      <path d="M10 2.5l2.3 4.7 5.2.75-3.75 3.66.9 5.14L10 14.9l-4.65 2.45.9-5.14L2.5 7.95l5.2-.75z"/>
+    </svg>
+  )
+}
+
 export function IcTicket({ size = 15 }: { size?: number }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>

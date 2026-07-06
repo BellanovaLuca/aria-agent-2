@@ -15,6 +15,7 @@ const Email     = lazy(() => import('./pages/Email').then(m => ({ default: m.Ema
 const Knowledge = lazy(() => import('./pages/Knowledge').then(m => ({ default: m.Knowledge })))
 const LiveCalls = lazy(() => import('./pages/LiveCalls').then(m => ({ default: m.LiveCalls })))
 const Tickets   = lazy(() => import('./pages/Tickets').then(m => ({ default: m.Tickets })))
+const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -80,6 +81,7 @@ export default function App() {
             {page === 'email'     && <Email     addToast={addToast} />}
             {page === 'knowledge' && <Knowledge addToast={addToast} />}
             {page === 'tickets'   && <Tickets   addToast={addToast} />}
+            {page === 'analytics' && <Analytics addToast={addToast} />}
           </div>
         </Suspense>
       </main>

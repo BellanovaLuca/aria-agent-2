@@ -34,6 +34,7 @@ _kill() {
 _kill "Frontend React"      "vite --port 5175"
 _kill "Voice Agent"         "voice_agent/agent.py"
 _kill "Email Processor"     "email_processor/processor.py"
+_kill "Analytics Service"   "uvicorn main:app.*8006"
 _kill "Ticket Service"      "uvicorn main:app.*8005"
 _kill "Chat Service"        "uvicorn main:app.*8004"
 _kill "Knowledge Service"   "uvicorn main:app.*8003"
@@ -41,7 +42,7 @@ _kill "Email Service"       "uvicorn main:app.*8002"
 _kill "User Service"        "uvicorn main:app.*8001"
 
 # Pulizia residua: qualsiasi processo rimasto sulle porte dei servizi
-for port in 8001 8002 8003 8004 8005 5175; do
+for port in 8001 8002 8003 8004 8005 8006 5175; do
   pid=$(lsof -ti tcp:$port 2>/dev/null)
   if [ -n "$pid" ]; then
     echo "  Processo residuo su porta $port (PID: $pid) — terminato."

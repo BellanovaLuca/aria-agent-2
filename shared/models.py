@@ -114,6 +114,24 @@ class Ticket(BaseModel):
     notes: list[TicketNote] = []
 
 
+AnalysisOutcome = Literal["risolto", "non_risolto", "escalation"]
+AnalysisSentiment = Literal["positivo", "neutro", "negativo"]
+AnalysisIntent = Literal["reset_password", "sblocco", "domanda", "altro"]
+
+
+class TranscriptAnalysis(BaseModel):
+    """Analisi AI post-chiamata di una singola trascrizione."""
+    filename: str
+    label: str
+    summary: str
+    outcome: AnalysisOutcome
+    sentiment: AnalysisSentiment
+    intent: AnalysisIntent
+    quality_score: int          # 1-5
+    quality_notes: str
+    analyzed_at: datetime
+
+
 class Email(BaseModel):
     """Email completa con metadati (id, timestamp, stato di processazione)."""
     id: str

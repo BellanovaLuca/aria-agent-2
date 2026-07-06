@@ -53,6 +53,26 @@ export interface Ticket {
   notes: TicketNote[]
 }
 
+export interface TranscriptAnalysis {
+  filename: string
+  label: string
+  summary: string
+  outcome: 'risolto' | 'non_risolto' | 'escalation'
+  sentiment: 'positivo' | 'neutro' | 'negativo'
+  intent: 'reset_password' | 'sblocco' | 'domanda' | 'altro'
+  quality_score: number
+  quality_notes: string
+  analyzed_at: string
+}
+
+export interface AnalyticsSummary {
+  total: number
+  avg_quality: number
+  by_outcome: Record<string, number>
+  by_sentiment: Record<string, number>
+  by_intent: Record<string, number>
+}
+
 export interface KnowledgeDoc {
   id: string
   filename: string
@@ -83,7 +103,7 @@ export interface LiveRoom {
   has_operator: boolean
 }
 
-export type Page = 'dashboard' | 'calls' | 'live' | 'admin' | 'email' | 'knowledge' | 'tickets'
+export type Page = 'dashboard' | 'calls' | 'live' | 'admin' | 'email' | 'knowledge' | 'tickets' | 'analytics'
 
 export interface ToastItem {
   id: string

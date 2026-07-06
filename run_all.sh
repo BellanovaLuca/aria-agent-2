@@ -66,6 +66,10 @@ cd "$ROOT/chat_service" && "$UVICORN" main:app --host 0.0.0.0 --port 8004 &
 echo "=== Avvio Ticket Service (porta 8005) ==="
 cd "$ROOT/ticket_service" && "$UVICORN" main:app --host 0.0.0.0 --port 8005 &
 
+# ── 3d. Analytics Service ─────────────────────────────────────────────────────
+echo "=== Avvio Analytics Service (porta 8006) ==="
+cd "$ROOT/analytics_service" && "$UVICORN" main:app --host 0.0.0.0 --port 8006 &
+
 # Breve attesa per dare tempo ai servizi HTTP di avviarsi prima che
 # email processor e voice agent tentino la prima connessione
 sleep 2
@@ -96,6 +100,7 @@ echo "  Email Service     → http://localhost:8002/docs"
 echo "  Knowledge Service → http://localhost:8003/docs"
 echo "  Chat Service      → http://localhost:8004/docs"
 echo "  Ticket Service    → http://localhost:8005/docs"
+echo "  Analytics Service → http://localhost:8006/docs"
 echo "  Frontend React    → http://localhost:5175"
 echo ""
 echo "Premi Ctrl+C per fermare tutto."

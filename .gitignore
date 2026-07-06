@@ -20,6 +20,7 @@ frontend-react/dist/
 transcripts/
 user_service/db.json
 ticket_service/tickets.json
+analytics_service/analyses.json
 knowledge_service/qdrant_data/
 .pytest_cache/
 

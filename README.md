@@ -288,7 +288,23 @@ Microservizio FastAPI che simula un **ITSM (mock ServiceNow)**. L'agente vi apre
 
 **Documentazione interattiva:** http://localhost:8005/docs
 
-### 8. Frontend React (`frontend-react/` — porta 5173)
+### 8. Analytics Service (`analytics_service/` — porta 8006)
+
+Microservizio FastAPI che genera **analisi AI post-chiamata**. Un job on-demand analizza le trascrizioni con **Gemini** (output strutturato JSON) estraendo per ciascuna: riassunto, esito (risolto/non risolto/escalation), sentiment, intento e un punteggio di qualità 1-5 con motivazione.
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /analyze` | Analizza le trascrizioni non ancora processate (batch con cap) |
+| `GET /analyses` | Elenca le analisi salvate |
+| `GET /summary` | Metriche aggregate (qualità media, distribuzioni di esito/sentiment/intento) |
+
+- L'analisi è **on-demand**: nessun costo LLM a runtime finché non viene invocata; non tocca la latenza delle conversazioni live.
+- Output vincolato da uno schema (structured output), quindi sempre parsabile.
+- Persistenza su `analyses.json` (esclusa dal repo); la logica di aggregazione è pura e testata.
+
+**Documentazione interattiva:** http://localhost:8006/docs
+
+### 9. Frontend React (`frontend-react/` — porta 5173)
 
 Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + TypeScript + Tailwind CSS**. Tema GitHub Dark con palette cromatica personalizzabile via tweak panel.
 
@@ -309,6 +325,8 @@ Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + Ty
 **Chat** — un widget fluttuante (accanto al pulsante chiamata) per conversare con Sofia in testo: gli stessi strumenti della voce (reset, sblocco, Q&A). La dashboard distingue i canali voce/email/chat nelle metriche e nei grafici.
 
 **Ticket** — coda dei ticket aperti dall'agente: filtro per stato, dettaglio espandibile con descrizione e note, controlli operatore per cambiare stato e aggiungere note di lavorazione.
+
+**Analisi** — analisi AI delle chiamate: pulsante per lanciare l'analisi delle trascrizioni, metriche di sintesi (qualità media, distribuzioni di esito/sentiment/motivo) e il dettaglio per singola conversazione con riassunto e punteggio.
 
 ---
 
@@ -468,9 +486,10 @@ INTERNAL_API_KEY=your_internal_api_key
 | 3 | Knowledge Service | 8003 |
 | 4 | Chat Service | 8004 |
 | 5 | Ticket Service | 8005 |
-| 6 | Email Processor | — |
-| 7 | Voice Agent | — |
-| 8 | Frontend React (Vite) | 5175 |
+| 6 | Analytics Service | 8006 |
+| 7 | Email Processor | — |
+| 8 | Voice Agent | — |
+| 9 | Frontend React (Vite) | 5175 |
 
 `Ctrl+C` ferma tutto tramite trap su `EXIT/INT/TERM`.
 
@@ -501,12 +520,15 @@ cd chat_service && uvicorn main:app --port 8004 --reload
 cd ticket_service && uvicorn main:app --port 8005 --reload
 
 # Terminale 6
+cd analytics_service && uvicorn main:app --port 8006 --reload
+
+# Terminale 7
 python email_processor/processor.py
 
-# Terminale 7 — Voice Agent
+# Terminale 8 — Voice Agent
 python voice_agent/agent.py dev
 
-# Terminale 8 — Frontend
+# Terminale 9 — Frontend
 cd frontend-react && npm run dev
 ```
 
@@ -540,6 +562,9 @@ cd chat_service && python -m pytest tests/ -q
 
 # Ticket Service — numerazione INC, filtri, PATCH, persistenza
 cd ticket_service && python -m pytest tests/ -q
+
+# Analytics Service — aggregazione, store, /analyze con LLM fake
+cd analytics_service && python -m pytest tests/ -q
 ```
 
 ---
@@ -608,6 +633,13 @@ aria-agent/
 │   ├── tests/                 # Test numerazione INC, filtri, PATCH, persistenza
 │   └── requirements.txt
 │
+├── analytics_service/
+│   ├── main.py                # FastAPI: /analyze, /analyses, /summary
+│   ├── analyzer.py            # Analisi Gemini con output strutturato (mockabile)
+│   ├── store.py               # Persistenza + aggregazione (puro, testato)
+│   ├── tests/                 # Test aggregazione, store, /analyze con LLM fake
+│   └── requirements.txt
+│
 ├── voice_agent/
 │   ├── agent.py               # Agente LiveKit + Gemini Live + trascrizione
 │   ├── tools.py               # Tool functions esposte al LLM
@@ -622,7 +654,7 @@ aria-agent/
 │   │   ├── utils.ts
 │   │   └── types.ts
 │   ├── package.json
-│   └── vite.config.ts         # Proxy: /api→8001, /email→8002, /knowledge→8003, /chat→8004, /tickets→8005
+│   └── vite.config.ts         # Proxy: /api→8001 /email→8002 /knowledge→8003 /chat→8004 /tickets→8005 /analytics→8006
 │
 ├── transcripts/               # Trascrizioni chiamate — generata a runtime, non versionata
 │
