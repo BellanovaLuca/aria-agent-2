@@ -40,6 +40,8 @@ export function Email({ addToast }: Props) {
   const timer     = useRef<ReturnType<typeof setInterval>>()
   const fastTimer = useRef<ReturnType<typeof setInterval>>()
   const fastUntil = useRef<number>(0)
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   const [selectedId, setSelectedId]     = useState<string | null>(null)
   const [search, setSearch]             = useState('')
@@ -94,6 +96,7 @@ export function Email({ addToast }: Props) {
         apiGet<EmailType[]>('/email/inbox').catch(() => null),
         apiGet<EmailType[]>('/email/sent').catch(() => null),
       ])
+      if (!mountedRef.current) return
       if (i) setInbox(i)
       if (s) setSent(s)
       if (i?.every((e) => e.processed)) clearInterval(fastTimer.current)

@@ -152,6 +152,8 @@ export function Calls({ addToast }: Props) {
   )
 
   const searchFetchedRef = useRef<Set<string>>(new Set())
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   // When search is active, auto-fetch all uncached transcripts in background
   useEffect(() => {
@@ -166,9 +168,9 @@ export function Calls({ addToast }: Props) {
       try {
         const res = await fetch(`/transcripts/${encodeURIComponent(t.filename)}`)
         const text = res.ok ? await res.text() : ''
-        setCache(p => ({ ...p, [t.filename]: text }))
+        if (mountedRef.current) setCache(p => ({ ...p, [t.filename]: text }))
       } catch { /* silent */ }
-      finally { setBgFetching(n => Math.max(0, n - 1)) }
+      finally { if (mountedRef.current) setBgFetching(n => Math.max(0, n - 1)) }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, transcripts])
