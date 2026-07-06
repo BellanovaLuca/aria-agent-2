@@ -12,7 +12,8 @@ Endpoints:
   PUT    /users/{username}          — aggiorna email, nome o stato
   DELETE /users/{username}          — elimina utente
   POST   /reset-password            — esegue reset, genera password temporanea
-  GET    /reset-history             — cronologia completa di tutti i reset
+  POST   /unlock-account            — sblocca utenza previa verifica identità
+  GET    /reset-history             — cronologia completa di tutte le operazioni
   GET    /reset-history/{username}  — cronologia reset per singolo utente
   DELETE /reset-history             — azzera la cronologia (usato dal frontend)
   GET    /token                     — genera JWT LiveKit per chiamata WebRTC via browser
@@ -31,7 +32,7 @@ import string
 import sys
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Literal, Optional
 
@@ -48,7 +49,14 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Aggiunge la root del progetto al path per importare i modelli condivisi
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from shared.models import ResetHistoryEntry, ResetRequest, ResetResult, User
+from shared.models import (
+    ResetHistoryEntry,
+    ResetRequest,
+    ResetResult,
+    UnlockRequest,
+    UnlockResult,
+    User,
+)
 from shared.auth import API_KEY_HEADER, get_internal_api_key, make_api_key_dependency
 
 log = logging.getLogger("user_service")
@@ -62,9 +70,14 @@ _LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
 _EMAIL_SERVICE_URL = os.getenv("EMAIL_SERVICE_URL", "http://localhost:8002")
 _AGENT_EMAIL = os.getenv("AGENT_EMAIL", "agent@password-reset.local")
 
+# Anti-abuso: oltre questo numero di sblocchi riusciti in 24h l'utenza va
+# gestita dal supporto (segnale di possibile brute-force). Vedi docs/04.
+_MAX_UNLOCKS_24H = int(os.getenv("MAX_UNLOCKS_24H", "2"))
+
 # ── Persistenza ───────────────────────────────────────────────────────────────
 
-DB_PATH = Path(__file__).parent / "db.json"
+# Override via USER_DB_PATH per i test (db isolato); default: db.json accanto al modulo.
+DB_PATH = Path(os.getenv("USER_DB_PATH", str(Path(__file__).parent / "db.json")))
 
 # Utenti pre-caricati al primo avvio (quando db.json non esiste ancora)
 DEMO_USERS: list[dict] = [
@@ -303,12 +316,15 @@ def reset_password(body: ResetRequest):
     return ResetResult(success=True, username=username, message=msg, new_password=new_pwd)
 
 
-def _make_history_entry(username: str, channel: str, success: bool, message: str) -> dict:
-    """Costruisce una voce della cronologia reset con id univoco e timestamp UTC."""
+def _make_history_entry(
+    username: str, channel: str, success: bool, message: str, operation: str = "reset"
+) -> dict:
+    """Costruisce una voce della cronologia operazioni con id univoco e timestamp UTC."""
     return {
         "id": str(uuid.uuid4()),
         "username": username,
         "channel": channel,
+        "operation": operation,
         "success": success,
         "message": message,
         "requested_at": datetime.now(timezone.utc).isoformat(),
@@ -346,6 +362,102 @@ def _send_password_email(user: dict, new_password: str) -> None:
         resp.raise_for_status()
     except Exception as exc:  # il canale email non deve mai far fallire il reset
         log.warning("Invio email password temporanea a %s fallito: %s", user["username"], exc)
+
+
+# ── Endpoint sblocco utenza ───────────────────────────────────────────────────
+
+def _normalize_name(name: str) -> str:
+    """Normalizza un nome per il confronto: minuscolo, spazi singoli, trim."""
+    return " ".join(name.split()).casefold()
+
+
+def _recent_successful_unlocks(username: str) -> int:
+    """Conta gli sblocchi riusciti per l'utente nelle ultime 24 ore (anti-abuso)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    count = 0
+    for e in reset_history:
+        if e.get("operation") != "unlock" or not e.get("success") or e["username"] != username:
+            continue
+        try:
+            ts = datetime.fromisoformat(e["requested_at"])
+        except (ValueError, KeyError):
+            continue
+        if ts >= cutoff:
+            count += 1
+    return count
+
+
+@app.post("/unlock-account", response_model=UnlockResult)
+def unlock_account(body: UnlockRequest):
+    """Sblocca un'utenza bloccata previa verifica d'identità e controllo anti-abuso.
+
+    Flusso (default-deny — ogni ramo negativo è registrato in cronologia):
+    - Utente non trovato → rifiuto
+    - Nome fornito ≠ nome registrato → rifiuto (verifica identità fallita)
+    - Troppi sblocchi recenti (>_MAX_UNLOCKS_24H in 24h) → rifiuto, rimanda al supporto
+    - Account sospeso → rifiuto, rimanda al supporto
+    - Account già attivo → nessuna azione necessaria
+    - Account bloccato → sblocca (status → active) e notifica via email
+    """
+    username = body.username
+
+    def _fail(msg: str) -> UnlockResult:
+        reset_history.append(_make_history_entry(username, body.channel, False, msg, "unlock"))
+        _save_db()
+        return UnlockResult(success=False, username=username, message=msg)
+
+    if username not in users_db:
+        return _fail("Utente non trovato")
+
+    user = users_db[username]
+
+    if _normalize_name(body.full_name) != _normalize_name(user["full_name"]):
+        # Messaggio volutamente generico: non conferma quale campo non torna.
+        return _fail("Verifica dell'identità non riuscita. Contatta il supporto.")
+
+    if _recent_successful_unlocks(username) >= _MAX_UNLOCKS_24H:
+        return _fail("Troppi sblocchi recenti per questa utenza. Contatta il supporto.")
+
+    if user["status"] == "suspended":
+        return _fail("Account sospeso. Contatta il supporto.")
+
+    if user["status"] == "active":
+        return _fail("L'account è già attivo: nessuno sblocco necessario.")
+
+    # status == "locked" → sblocca
+    user["status"] = "active"
+    msg = "Utenza sbloccata con successo."
+    reset_history.append(_make_history_entry(username, body.channel, True, msg, "unlock"))
+    _save_db()
+    if body.channel == "voice":
+        _send_unlock_email(user)
+    return UnlockResult(success=True, username=username, message=msg)
+
+
+def _send_unlock_email(user: dict) -> None:
+    """Notifica via email l'avvenuto sblocco (best-effort, non blocca l'operazione)."""
+    body = (
+        f"Gentile {user['full_name']},\n\n"
+        f"come richiesto telefonicamente, l'utenza '{user['username']}' è stata "
+        f"sbloccata ed è di nuovo attiva.\n\n"
+        f"Se non hai richiesto tu questo sblocco, contatta subito il supporto IT.\n\n"
+        f"Cordiali saluti,\nServizio IT"
+    )
+    try:
+        resp = httpx.post(
+            f"{_EMAIL_SERVICE_URL}/send",
+            json={
+                "from_address": _AGENT_EMAIL,
+                "to_address": user["email"],
+                "subject": "Utenza sbloccata",
+                "body": body,
+            },
+            headers={API_KEY_HEADER: get_internal_api_key()},
+            timeout=5.0,
+        )
+        resp.raise_for_status()
+    except Exception as exc:
+        log.warning("Invio email sblocco a %s fallito: %s", user["username"], exc)
 
 
 # ── Endpoints cronologia reset ────────────────────────────────────────────────

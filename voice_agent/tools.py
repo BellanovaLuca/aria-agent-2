@@ -22,6 +22,7 @@ from livekit.agents import llm
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8001")
+KNOWLEDGE_SERVICE_URL = os.getenv("KNOWLEDGE_SERVICE_URL", "http://localhost:8003")
 _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,10 @@ _SERVICE_UNAVAILABLE = {
         "Invita l'utente a riprovare tra qualche minuto o a contattare il supporto."
     ),
 }
+
+
+def _headers() -> dict:
+    return {"X-Internal-Api-Key": _INTERNAL_API_KEY}
 
 
 @llm.function_tool
@@ -98,3 +103,75 @@ async def reset_user_password(username: str) -> dict:
         "status": user.get("status", "unknown"),
         **result,
     }
+
+
+@llm.function_tool
+async def unlock_account(username: str, full_name: str) -> dict:
+    """Sblocca un'utenza bloccata dopo aver verificato l'identità dell'utente.
+
+    Da usare quando l'utente dice che il suo account è bloccato/lockato e NON
+    si tratta di una password dimenticata. Richiede sia lo username sia il nome
+    e cognome completo: il backend li confronta con quelli registrati e rifiuta
+    lo sblocco se non corrispondono o se ci sono stati troppi sblocchi recenti.
+
+    Args:
+        username: Username dell'account (es. "luca.neri").
+        full_name: Nome e cognome completo dichiarato dall'utente, per la verifica.
+
+    Returns:
+        Dizionario con success e message (esito da riferire all'utente).
+    """
+    log.info(">>> TOOL CALL: unlock_account(username=%r)", username)
+    try:
+        async with httpx.AsyncClient(timeout=10.0, headers=_headers()) as client:
+            resp = await client.post(
+                f"{USER_SERVICE_URL}/unlock-account",
+                json={"username": username, "full_name": full_name, "channel": "voice"},
+            )
+            resp.raise_for_status()
+            result = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning(">>> user service non disponibile: %s", exc)
+        return dict(_SERVICE_UNAVAILABLE)
+    log.info(">>> unlock per %r: success=%s", username, result.get("success"))
+    return result
+
+
+@llm.function_tool
+async def search_knowledge_base(query: str) -> dict:
+    """Cerca nella base di conoscenza IT la risposta a una domanda dell'utente.
+
+    Da usare quando l'utente pone una domanda informativa (es. "come mi collego
+    alla VPN?", "come configuro la posta sul telefono?"). Restituisce i passaggi
+    più pertinenti trovati nei documenti aziendali, ciascuno con il nome del
+    documento di origine.
+
+    IMPORTANTE: rispondi all'utente SOLO con le informazioni contenute nei
+    passaggi restituiti. Se la lista dei passaggi è vuota, dillo apertamente e
+    non inventare: suggerisci di rivolgersi al supporto.
+
+    Args:
+        query: La domanda dell'utente, riformulata in modo chiaro e conciso.
+
+    Returns:
+        Dizionario con `passages` (lista di {text, source}) e `found` (bool).
+    """
+    log.info(">>> TOOL CALL: search_knowledge_base(query=%r)", query)
+    try:
+        async with httpx.AsyncClient(timeout=10.0, headers=_headers()) as client:
+            resp = await client.post(
+                f"{KNOWLEDGE_SERVICE_URL}/search",
+                json={"query": query, "top_k": 3},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning(">>> knowledge service non disponibile: %s", exc)
+        return {
+            "found": False,
+            "passages": [],
+            "message": "La base di conoscenza non è al momento raggiungibile.",
+        }
+    passages = [{"text": h["text"], "source": h["filename"]} for h in data.get("hits", [])]
+    log.info(">>> knowledge: %d passaggi trovati", len(passages))
+    return {"found": bool(passages), "passages": passages}

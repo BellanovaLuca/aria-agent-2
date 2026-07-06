@@ -1,8 +1,9 @@
 """
-Voice Agent — canale telefonico del sistema di reset password.
+Voice Agent — canale telefonico del supporto IT.
 
 Riceve chiamate SIP inoltrate da LiveKit Cloud, conduce una conversazione
-vocale in italiano tramite Google Gemini Live e invoca i tool di reset.
+vocale in italiano tramite Google Gemini Live e invoca i tool di supporto
+(reset password, sblocco utenza, Q&A sulla knowledge base).
 
 Flusso infrastrutturale:
   Twilio (PSTN) → LiveKit Cloud (SIP→WebRTC) → questo processo
@@ -27,7 +28,7 @@ from livekit.plugins.google import realtime as google_realtime
 
 # sys.path consente l'import di voice_agent.tools dalla root del progetto
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from voice_agent.tools import reset_user_password
+from voice_agent.tools import reset_user_password, search_knowledge_base, unlock_account
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -44,48 +45,61 @@ TRANSCRIPTS_DIR.mkdir(exist_ok=True)
 AGENT_NAME = "Sofia"
 
 INSTRUCTIONS = f"""
-Sei {AGENT_NAME}, l'assistente vocale del servizio IT aziendale per il reset delle password.
+Sei {AGENT_NAME}, l'assistente vocale del servizio IT aziendale.
 Non sei un robot: sei una persona gentile, paziente e competente che aiuta i colleghi
-quando sono bloccati fuori dai loro account. Hai una voce calda e rassicurante.
+con i problemi informatici. Hai una voce calda e rassicurante.
 
-Il tuo unico compito è aiutare gli utenti a resettare la loro password aziendale.
-Nulla di più, nulla di meno — ma fallo con cura e attenzione.
+Puoi aiutare con TRE tipi di richieste, ognuna con il suo strumento:
 
-Comportati così:
-1. Saluta cordialmente e chiedi come puoi aiutare.
-2. Quando l'utente chiede il reset, chiedi username o email con tono colloquiale.
-   Se l'utente sembra confuso o frustrato, rassicuralo: è normale dimenticare le password,
-   ci pensi tu.
-3. Appena l'utente fornisce username o email, chiama IMMEDIATAMENTE il tool reset_user_password.
-   NON pronunciare nessuna frase prima di chiamare il tool: niente "Verifico", "Eseguo",
-   "Procedo", "Un momento" o simili. Chiama il tool in silenzio, poi parla solo dopo
-   aver ricevuto il risultato.
-   - Se l'utente non esiste: comunicalo e chiedi di verificare username/email.
-   - Se l'account è bloccato o sospeso: comunicalo e suggerisci di contattare il supporto.
-   - Se il reset è riuscito: di' all'utente che riceverà una email con la nuova password
-     temporanea e che dovrà cambiarla al primo accesso.
-4. Chiedi se c'è altro con cui puoi aiutare. Saluta in modo caldo e personale,
-   non con frasi standardizzate. Augura una buona giornata.
+1. RESET PASSWORD — quando l'utente ha dimenticato la password o vuole cambiarla.
+   Chiedi username o email con tono colloquiale (rassicuralo se è frustrato).
+   Appena lo fornisce, chiama IMMEDIATAMENTE e IN SILENZIO il tool reset_user_password.
+   - Non trovato: comunicalo e chiedi di riverificare username/email.
+   - Account bloccato o sospeso: se è bloccato proponi lo sblocco (vedi punto 2);
+     se è sospeso, invita a contattare il supporto.
+   - Riuscito: di' che riceverà una email con la password temporanea da cambiare
+     al primo accesso.
 
-Parla sempre in italiano. Sii cordiale, conciso e professionale.
-Non fare altro che il reset password: se l'utente chiede cose diverse,
-spiegagli gentilmente che puoi solo aiutarlo con il reset della password.
+2. SBLOCCO UTENZA — quando l'utente dice che il suo account è bloccato/lockato
+   (e non è una password dimenticata). Per sicurezza devi verificare l'identità:
+   chiedi PRIMA lo username e POI il nome e cognome completo. Solo quando hai
+   entrambi, chiama IN SILENZIO il tool unlock_account.
+   - Riuscito: conferma che l'utenza è di nuovo attiva e riceverà una email.
+   - Verifica non riuscita o troppi sblocchi: riferisci il messaggio e, se serve,
+     invita a contattare il supporto. Non insistere e non aggirare la verifica.
+
+3. DOMANDE IT (come si fa a…) — quando l'utente fa una domanda informativa
+   (VPN, posta, stampanti, procedure). Chiama IN SILENZIO il tool
+   search_knowledge_base con la domanda riformulata in modo chiaro.
+   - RISPONDI SOLO con le informazioni contenute nei passaggi restituiti dal tool.
+     Non aggiungere nulla di tua iniziativa, non inventare procedure.
+   - Se citi una procedura, menziona da quale documento proviene.
+   - Se il tool non restituisce passaggi, dillo con onestà e proponi il supporto.
+     Meglio ammettere di non sapere che dare un'informazione errata.
+
+Regole trasversali:
+- NON pronunciare frasi di attesa prima di chiamare un tool ("Verifico", "Un momento"…):
+  chiama il tool in silenzio e parla solo dopo aver ricevuto il risultato.
+- Parla sempre in italiano, in modo cordiale, conciso e professionale.
+- Se la richiesta esula da questi tre ambiti, spiega con gentilezza cosa puoi fare.
+- Chiudi chiedendo se serve altro e saluta in modo caldo e personale.
 """.strip()
 
 
 # ── Agente ────────────────────────────────────────────────────────────────────
 
-class PasswordResetAgent(Agent):
-    """Agente vocale LiveKit specializzato nel reset password.
+class ITSupportAgent(Agent):
+    """Agente vocale LiveKit per il supporto IT di primo livello.
 
-    Eredita da Agent e registra i tool functions che Gemini Live
-    può invocare autonomamente durante la conversazione.
+    Eredita da Agent e registra i tool functions (reset password, sblocco
+    utenza, ricerca nella knowledge base) che Gemini Live può invocare
+    autonomamente durante la conversazione.
     """
 
     def __init__(self) -> None:
         super().__init__(
             instructions=INSTRUCTIONS,
-            tools=[reset_user_password],
+            tools=[reset_user_password, unlock_account, search_knowledge_base],
         )
 
     async def on_enter(self) -> None:
@@ -165,7 +179,7 @@ async def entrypoint(ctx: JobContext) -> None:
         transcript_file.close()
         log.info("Trascrizione salvata: %s", transcript_path)
 
-    await session.start(PasswordResetAgent(), room=ctx.room)
+    await session.start(ITSupportAgent(), room=ctx.room)
 
 
 # ── Avvio worker ──────────────────────────────────────────────────────────────

@@ -37,11 +37,33 @@ class ResetResult(BaseModel):
     new_password: Optional[str] = None  # presente solo se success=True
 
 
+class UnlockRequest(BaseModel):
+    """Payload per richiedere lo sblocco di un'utenza bloccata.
+
+    full_name è la verifica d'identità: deve corrispondere al nome registrato.
+    """
+    username: str
+    full_name: str
+    channel: Literal["voice", "email"]
+
+
+class UnlockResult(BaseModel):
+    """Risposta del servizio di sblocco utenza."""
+    success: bool
+    username: str
+    message: str
+
+
 class ResetHistoryEntry(BaseModel):
-    """Voce della cronologia reset, persistita in db.json."""
+    """Voce della cronologia operazioni, persistita in db.json.
+
+    operation distingue reset password da sblocco utenza; default "reset" per
+    retrocompatibilità con le voci storiche prive del campo.
+    """
     id: str
     username: str
     channel: Literal["voice", "email"]
+    operation: Literal["reset", "unlock"] = "reset"
     success: bool
     message: str
     requested_at: datetime
