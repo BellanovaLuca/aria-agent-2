@@ -2,7 +2,9 @@
 
 Piattaforma open-source per costruire **agenti AI multicanale** con voce, email e interfaccia web. Il progetto include un'implementazione di riferimento ma l'architettura è progettata per essere adattata a qualsiasi caso d'uso conversazionale.
 
-Stack: [LiveKit Agents](https://github.com/livekit/agents) + **Google Gemini Live** (LLM + STT + TTS nativo audio) + **React** dashboard di monitoraggio.
+L'assistente vocale ("Sofia") gestisce tre tipi di richieste: **reset password**, **sblocco utenza** (con verifica d'identità) e **domande IT** — a queste ultime risponde attingendo a una **knowledge base** (RAG) costruita sui documenti aziendali caricati dalla dashboard.
+
+Stack: [LiveKit Agents](https://github.com/livekit/agents) + **Google Gemini Live** (LLM + STT + TTS nativo audio) + **Qdrant** (vector store per la RAG) + embedding **Gemini** + **React** dashboard di monitoraggio.
 
 > **Nota** — la cartella [`docs/`](docs/README.md) non descrive questa PoC:
 > contiene l'architettura e la documentazione tecnica di una **possibile
@@ -205,7 +207,8 @@ Microservizio FastAPI che gestisce gli utenti e la cronologia operazioni. Persis
 | `PUT /users/{username}` | Aggiorna utente |
 | `DELETE /users/{username}` | Elimina utente |
 | `POST /reset-password` | Esegue il reset, genera password temporanea |
-| `GET /reset-history` | Cronologia completa |
+| `POST /unlock-account` | Sblocca un'utenza previa verifica identità (nome+cognome) e anti-abuso |
+| `GET /reset-history` | Cronologia completa (reset e sblocchi) |
 | `GET /reset-history/{username}` | Cronologia per utente |
 | `DELETE /reset-history` | Azzera la cronologia |
 | `GET /transcripts` | Lista trascrizioni chiamate |
@@ -233,7 +236,26 @@ Microservizio FastAPI che simula un server email. Storage in memoria (si resetta
 
 **Documentazione interattiva:** http://localhost:8002/docs
 
-### 5. Frontend React (`frontend-react/` — porta 5173)
+### 5. Knowledge Service (`knowledge_service/` — porta 8003)
+
+Microservizio FastAPI che alimenta la Q&A dell'agente. Indicizza documenti (PDF, Markdown, testo) in un vector store **Qdrant** e li rende interrogabili semanticamente.
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /documents` | Carica e indicizza un documento (whitelist estensioni, cap 10 MB) |
+| `GET /documents` | Elenca i documenti indicizzati |
+| `DELETE /documents/{id}` | Elimina un documento e i suoi frammenti |
+| `POST /search` | Ricerca semantica: restituisce i passaggi rilevanti con il documento di origine |
+
+- **Chunking**: ~280 parole per frammento con sovrapposizione, così un'informazione a cavallo di due chunk resta recuperabile.
+- **Embedding**: modello `gemini-embedding-001` (768 dim), un unico provider con l'LLM.
+- **Qdrant**: gira in locale embedded (cartella `knowledge_service/qdrant_data/`, esclusa dal repo). Impostando `QDRANT_URL` si passa a un server Qdrant esterno o a Qdrant Cloud senza modifiche al codice.
+
+Il tool `search_knowledge_base` del voice agent interroga questo servizio; il prompt impone all'agente di rispondere **solo** con i passaggi restituiti (anti-allucinazione) e di citare la fonte.
+
+**Documentazione interattiva:** http://localhost:8003/docs
+
+### 6. Frontend React (`frontend-react/` — porta 5173)
 
 Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + TypeScript + Tailwind CSS**. Tema GitHub Dark con palette cromatica personalizzabile via tweak panel.
 
@@ -244,6 +266,8 @@ Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + Ty
 **Email** — monitoraggio flusso email in entrata/uscita, filtro per stato e data, simulazione invio email.
 
 **Admin** — gestione utenti (CRUD + ricerca per nome/username), simulazione richieste email, cronologia per utente.
+
+**Knowledge** — caricamento documenti (drag & drop di PDF/MD/TXT), lista con conteggio frammenti, eliminazione, e un box "prova una ricerca" che mostra i passaggi che l'agente userebbe per rispondere, con fonte e percentuale di rilevanza.
 
 ---
 
@@ -316,6 +340,7 @@ conda activate aria-agent
 pip install -r user_service/requirements.txt
 pip install -r email_service/requirements.txt
 pip install -r email_processor/requirements.txt
+pip install -r knowledge_service/requirements.txt
 pip install -r voice_agent/requirements.txt
 ```
 
@@ -398,9 +423,10 @@ INTERNAL_API_KEY=your_internal_api_key
 |--------|----------|-------|
 | 1 | User Service | 8001 |
 | 2 | Email Service | 8002 |
-| 3 | Email Processor | — |
-| 4 | Voice Agent | — |
-| 5 | Frontend React (Vite) | 5173 |
+| 3 | Knowledge Service | 8003 |
+| 4 | Email Processor | — |
+| 5 | Voice Agent | — |
+| 6 | Frontend React (Vite) | 5175 |
 
 `Ctrl+C` ferma tutto tramite trap su `EXIT/INT/TERM`.
 
@@ -422,12 +448,15 @@ cd user_service && uvicorn main:app --port 8001 --reload
 cd email_service && uvicorn main:app --port 8002 --reload
 
 # Terminale 3
+cd knowledge_service && uvicorn main:app --port 8003 --reload
+
+# Terminale 4
 python email_processor/processor.py
 
-# Terminale 4 — Voice Agent
+# Terminale 5 — Voice Agent
 python voice_agent/agent.py dev
 
-# Terminale 5 — Frontend
+# Terminale 6 — Frontend
 cd frontend-react && npm run dev
 ```
 
@@ -439,6 +468,22 @@ cd user_service && uvicorn main:app --port 8001 --reload &
 cd email_service && uvicorn main:app --port 8002 --reload &
 python email_processor/processor.py &
 cd frontend-react && npm run dev
+```
+
+---
+
+## Test
+
+I test unitari non richiedono chiavi API né rete (gli embedding sono mockati, Qdrant gira in-memory, l'Email Service è simulato):
+
+```bash
+conda activate aria-agent
+
+# Knowledge Service — chunking + store vettoriale
+cd knowledge_service && python -m pytest tests/ -q
+
+# User Service — sblocco utenza (verifica identità, anti-abuso, stati)
+cd user_service && python -m pytest tests/ -q
 ```
 
 ---
@@ -472,6 +517,7 @@ aria-agent/
 │
 ├── shared/
 │   ├── __init__.py
+│   ├── auth.py                # Dependency X-Internal-Api-Key condivisa
 │   └── models.py              # Modelli Pydantic condivisi
 │
 ├── user_service/
@@ -486,6 +532,14 @@ aria-agent/
 │   ├── processor.py           # Loop asincrono polling email
 │   └── requirements.txt
 │
+├── knowledge_service/
+│   ├── main.py                # FastAPI: upload/list/delete documenti + /search
+│   ├── chunker.py             # Estrazione testo + chunking (puro, testato)
+│   ├── embeddings.py          # Wrapper embedding Gemini (singleton lazy)
+│   ├── store.py               # Vector store Qdrant (indicizza, cerca, elimina)
+│   ├── tests/                 # Test unitari (chunker, store con embedding fake)
+│   └── requirements.txt
+│
 ├── voice_agent/
 │   ├── agent.py               # Agente LiveKit + Gemini Live + trascrizione
 │   ├── tools.py               # Tool functions esposte al LLM
@@ -494,13 +548,13 @@ aria-agent/
 ├── frontend-react/            # Dashboard React
 │   ├── src/
 │   │   ├── App.tsx
-│   │   ├── pages/             # Dashboard, Calls, Admin, Email
+│   │   ├── pages/             # Dashboard, Calls, Admin, Email, Knowledge
 │   │   ├── components/        # Sidebar, MetricCard, StatusBadge, Toast, ...
 │   │   ├── hooks/             # useApi, useToast
 │   │   ├── utils.ts
 │   │   └── types.ts
 │   ├── package.json
-│   └── vite.config.ts         # Proxy: /api→:8001, /email→:8002, /transcripts→:8001
+│   └── vite.config.ts         # Proxy: /api→:8001, /email→:8002, /knowledge→:8003
 │
 ├── transcripts/               # Trascrizioni chiamate — generata a runtime, non versionata
 │
@@ -516,7 +570,9 @@ aria-agent/
 
 | Funzionalità | Come aggiungerla |
 |---|---|
-| Nuovo tool per l'agente vocale | Aggiungi funzione in `voice_agent/tools.py` + endpoint in `user_service/main.py` |
+| Nuovo tool per l'agente vocale | Aggiungi funzione in `voice_agent/tools.py`, registrala nella lista `tools=[...]` in `voice_agent/agent.py` e aggiorna le `INSTRUCTIONS` |
+| Nuovi documenti nella knowledge base | Caricali dalla pagina Knowledge della dashboard (o `POST /documents`) — vengono indicizzati e resi disponibili all'agente |
+| Vector store in produzione | Avvia un server Qdrant e imposta `QDRANT_URL` — nessuna modifica al codice |
 | Email reale (IMAP/SMTP) | Sostituisci `email_processor/processor.py` mantenendo l'interfaccia verso User Service |
 | Nuovo canale (WhatsApp, Telegram, chat web) | Nuovo modulo indipendente che chiama gli endpoint User Service |
 | Database reale (PostgreSQL, SQLite) | Sostituisci la persistenza JSON in `user_service/main.py` |

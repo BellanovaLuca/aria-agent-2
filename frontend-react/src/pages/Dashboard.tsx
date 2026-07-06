@@ -649,7 +649,7 @@ export function Dashboard({ addToast }: Props) {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)' }}>
-              Cronologia Reset
+              Cronologia Operazioni
             </span>
             {activeFilter && (
               <button onClick={setFilterNull} style={{
@@ -670,7 +670,7 @@ export function Dashboard({ addToast }: Props) {
 
         {history.length === 0 ? (
           <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>
-            Nessun reset effettuato ancora.
+            Nessuna operazione effettuata ancora.
           </div>
         ) : (
           <>
@@ -678,7 +678,7 @@ export function Dashboard({ addToast }: Props) {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Timestamp', 'Canale', 'Username', 'Esito', 'Messaggio'].map(h => (
+                    {['Timestamp', 'Canale', 'Tipo', 'Username', 'Esito', 'Messaggio'].map(h => (
                       <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -698,6 +698,13 @@ export function Dashboard({ addToast }: Props) {
                         <span title={e.channel === 'voice' ? 'Telefono' : 'Email'} style={{ display: 'inline-flex', color: 'var(--text2)' }}>
                           {e.channel === 'voice' ? <IcPhone size={15} /> : <IcEmailIcon size={15} />}
                         </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {(e.operation ?? 'reset') === 'unlock' ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--warn-dim)', color: 'var(--warn)', border: '1px solid #fbbf2440', whiteSpace: 'nowrap' }}>Sblocco</span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-glow)', whiteSpace: 'nowrap' }}>Reset</span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>{e.username}</td>
                       <td style={{ padding: '12px 16px' }}><StatusBadge type={e.success ? 'success' : 'error'} /></td>

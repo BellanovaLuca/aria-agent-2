@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m
 const Calls     = lazy(() => import('./pages/Calls').then(m => ({ default: m.Calls })))
 const Admin     = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })))
 const Email     = lazy(() => import('./pages/Email').then(m => ({ default: m.Email })))
+const Knowledge = lazy(() => import('./pages/Knowledge').then(m => ({ default: m.Knowledge })))
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -73,6 +74,7 @@ export default function App() {
             {page === 'calls'     && <Calls     addToast={addToast} />}
             {page === 'admin'     && <Admin     addToast={addToast} onUserCountChange={setUserCount} />}
             {page === 'email'     && <Email     addToast={addToast} />}
+            {page === 'knowledge' && <Knowledge addToast={addToast} />}
           </div>
         </Suspense>
       </main>

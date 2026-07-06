@@ -102,6 +102,31 @@ export function IcKey({ size = 17 }: { size?: number }) {
   )
 }
 
+export function IcBook({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M10 4.5C10 4.5 8.5 3 5.5 3S2 4 2 4v11s1.5-1 3.5-1 4.5 1.5 4.5 1.5m0-12v12m0-12s1.5-1.5 4.5-1.5S18 4 18 4v11s-1-1-3.5-1-4.5 1.5-4.5 1.5"/>
+    </svg>
+  )
+}
+
+export function IcUpload({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M10 13V3m0 0L6 7m4-4l4 4M3 15v1a1 1 0 001 1h12a1 1 0 001-1v-1"/>
+    </svg>
+  )
+}
+
+export function IcUnlock({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <rect x="4" y="9" width="12" height="8" rx="1.5"/>
+      <path d="M7 9V6a3 3 0 015.9-.8"/>
+    </svg>
+  )
+}
+
 export function IcCheckCircle({ size = 14 }: { size?: number }) {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>

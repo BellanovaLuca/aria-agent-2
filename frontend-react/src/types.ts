@@ -11,6 +11,7 @@ export interface ResetHistoryEntry {
   id?: string
   username: string
   channel: 'voice' | 'email'
+  operation?: 'reset' | 'unlock'
   success: boolean
   message: string
   requested_at: string
@@ -32,7 +33,22 @@ export interface TranscriptMeta {
   timestamp: string
 }
 
-export type Page = 'dashboard' | 'calls' | 'admin' | 'email'
+export interface KnowledgeDoc {
+  id: string
+  filename: string
+  chunk_count: number
+  uploaded_at: string
+}
+
+export interface KnowledgeHit {
+  doc_id: string
+  filename: string
+  chunk_index: number
+  text: string
+  score: number
+}
+
+export type Page = 'dashboard' | 'calls' | 'admin' | 'email' | 'knowledge'
 
 export interface ToastItem {
   id: string

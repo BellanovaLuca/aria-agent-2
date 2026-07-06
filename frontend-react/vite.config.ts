@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': backend('http://localhost:8001', (path) => path.replace(/^\/api/, '')),
         '/email': backend('http://localhost:8002', (path) => path.replace(/^\/email/, '')),
+        '/knowledge': backend('http://localhost:8003', (path) => path.replace(/^\/knowledge/, '')),
         '/transcripts': backend('http://localhost:8001'),
         '/token': backend('http://localhost:8001'),
       },
