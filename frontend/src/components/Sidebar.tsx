@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { IcDashboard, IcEmailIcon, IcPhone, IcUsers, IcKey, IcBook, IcHeadset, IcTicket, IcChart } from './icons'
+import { IcDashboard, IcEmailIcon, IcPhone, IcUsers, IcBook, IcHeadset, IcTicket, IcChart } from './icons'
 import type { Page } from '../types'
 
 interface Props {
@@ -9,6 +9,48 @@ interface Props {
   onThemeToggle: () => void
   userCount: number
   onTweaks: (rect: DOMRect) => void
+}
+
+/* ── Gruppi di navigazione ───────────────────────────────────────────────────
+   Le voci sono raggruppate per area funzionale; ogni gruppo è collassabile. */
+
+interface NavItemDef { page: Page; label: string }
+interface NavGroup { id: string; label: string; items: NavItemDef[] }
+
+const NAV_GROUPS: NavGroup[] = [
+  { id: 'panoramica', label: 'Panoramica', items: [
+    { page: 'dashboard', label: 'Dashboard' },
+    { page: 'analytics', label: 'Analisi' },
+  ] },
+  { id: 'canali', label: 'Canali', items: [
+    { page: 'email', label: 'Email' },
+    { page: 'calls', label: 'Chiamate' },
+    { page: 'live', label: 'Chiamate Live' },
+  ] },
+  { id: 'supporto', label: 'Supporto', items: [
+    { page: 'knowledge', label: 'Knowledge' },
+    { page: 'tickets', label: 'Ticket' },
+  ] },
+  { id: 'amministrazione', label: 'Amministrazione', items: [
+    { page: 'admin', label: 'Utenti' },
+  ] },
+]
+
+const GROUP_OF: Record<string, string> = Object.fromEntries(
+  NAV_GROUPS.flatMap(g => g.items.map(it => [it.page, g.id])),
+)
+
+function iconFor(page: Page, size = 15): React.ReactNode {
+  switch (page) {
+    case 'dashboard': return <IcDashboard size={size} />
+    case 'analytics': return <IcChart size={size} />
+    case 'email':     return <IcEmailIcon size={size} />
+    case 'calls':     return <IcPhone size={size} />
+    case 'live':      return <IcHeadset size={size} />
+    case 'knowledge': return <IcBook size={size} />
+    case 'tickets':   return <IcTicket size={size} />
+    case 'admin':     return <IcUsers size={size} />
+  }
 }
 
 /* ── Local icons ─────────────────────────────────────────────────────────── */
@@ -52,43 +94,30 @@ function AriaMark({ size = 36 }: { size?: number }) {
   )
 }
 
-/* ── NavItem ─────────────────────────────────────────────────────────────── */
+/* ── Voci ────────────────────────────────────────────────────────────────── */
 
-function NavItem({
-  page, label, icon, isActive, isCollapsed, badge, onNavigate
-}: {
-  page: Page; label: string; icon: React.ReactNode; isActive: boolean
-  isCollapsed: boolean; badge?: number; onNavigate: (p: Page) => void
+function ExpandedItem({ page, label, isActive, badge, onNavigate }: {
+  page: Page; label: string; isActive: boolean; badge?: number; onNavigate: (p: Page) => void
 }) {
   return (
     <button
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 9,
-        padding: isCollapsed ? '9px 0' : '9px 10px',
-        justifyContent: isCollapsed ? 'center' : undefined,
-        borderRadius: 8,
-        background: isActive ? 'var(--accent-dim)' : 'transparent',
-        color: isActive ? 'var(--accent)' : 'var(--text2)',
-        fontSize: 15,
-        fontWeight: isActive ? 600 : 400,
-        border: isActive ? '1px solid var(--accent-glow)' : '1px solid transparent',
-        transition: 'background .12s, color .12s, border-color .12s',
-        cursor: 'pointer',
-        marginBottom: 2,
-        position: 'relative',
-      }}
       onClick={() => onNavigate(page)}
       aria-current={isActive ? 'page' : undefined}
-      title={isCollapsed ? label : undefined}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+        padding: '8px 10px 8px 20px', borderRadius: 8, marginBottom: 2,
+        background: isActive ? 'var(--accent-dim)' : 'transparent',
+        color: isActive ? 'var(--accent)' : 'var(--text2)',
+        fontSize: 15, fontWeight: isActive ? 600 : 400,
+        border: isActive ? '1px solid var(--accent-glow)' : '1px solid transparent',
+        transition: 'background .12s, color .12s, border-color .12s', cursor: 'pointer',
+      }}
       onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)' } }}
       onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
     >
-      {icon}
-      {!isCollapsed && <span className="flex-1 truncate text-left">{label}</span>}
-      {!isCollapsed && badge != null && badge > 0 && (
+      {iconFor(page)}
+      <span className="flex-1 truncate text-left">{label}</span>
+      {badge != null && badge > 0 && (
         <span style={{ marginLeft: 'auto', background: 'var(--accent)', color: 'white', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
           {badge}
         </span>
@@ -97,16 +126,49 @@ function NavItem({
   )
 }
 
+function CollapsedItem({ page, label, isActive, onNavigate }: {
+  page: Page; label: string; isActive: boolean; onNavigate: (p: Page) => void
+}) {
+  return (
+    <button
+      onClick={() => onNavigate(page)}
+      title={label}
+      aria-current={isActive ? 'page' : undefined}
+      aria-label={label}
+      style={{
+        width: '100%', display: 'flex', justifyContent: 'center',
+        padding: '9px 0', borderRadius: 8, marginBottom: 2,
+        background: isActive ? 'var(--accent-dim)' : 'transparent',
+        color: isActive ? 'var(--accent)' : 'var(--text2)',
+        border: isActive ? '1px solid var(--accent-glow)' : '1px solid transparent',
+        cursor: 'pointer', transition: 'background .12s, color .12s',
+      }}
+      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)' } }}
+      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
+    >
+      {iconFor(page, 17)}
+    </button>
+  )
+}
+
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 
-const RESET_PAGES: Page[] = ['dashboard', 'email']
 const MIN_W = 180, MAX_W = 420, DEFAULT_W = 280
+
+function loadOpenGroups(): Record<string, boolean> {
+  try {
+    const stored = JSON.parse(localStorage.getItem('aria-nav-groups') ?? '{}')
+    return Object.fromEntries(NAV_GROUPS.map(g => [g.id, stored[g.id] ?? true]))
+  } catch {
+    return Object.fromEntries(NAV_GROUPS.map(g => [g.id, true]))
+  }
+}
 
 export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount, onTweaks }: Props) {
   const [isCollapsed, setIsCollapsed] = useState(() =>
     localStorage.getItem('aria-sidebar-collapsed') === 'true'
   )
-  const [resetOpen, setResetOpen] = useState(true)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(loadOpenGroups)
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_W)
   const [dragging, setDragging]     = useState(false)
   const [handleHover, setHandleHover] = useState(false)
@@ -117,6 +179,10 @@ export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount,
   }, [isCollapsed])
 
   useEffect(() => {
+    localStorage.setItem('aria-nav-groups', JSON.stringify(openGroups))
+  }, [openGroups])
+
+  useEffect(() => {
     widthRef.current = sidebarWidth
   }, [sidebarWidth])
 
@@ -125,9 +191,13 @@ export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount,
     document.documentElement.style.setProperty('--sidebar-w', `${w}px`)
   }, [isCollapsed, sidebarWidth])
 
+  // Apre automaticamente il gruppo che contiene la pagina attiva.
   useEffect(() => {
-    if (RESET_PAGES.includes(current)) setResetOpen(true)
+    const gid = GROUP_OF[current]
+    if (gid) setOpenGroups(o => (o[gid] ? o : { ...o, [gid]: true }))
   }, [current])
+
+  const toggleGroup = (id: string) => setOpenGroups(o => ({ ...o, [id]: !o[id] }))
 
   const handleDragStart = (e: React.MouseEvent) => {
     if (isCollapsed) return
@@ -206,98 +276,47 @@ export function Sidebar({ current, onNavigate, isDark, onThemeToggle, userCount,
 
       {/* ── Nav ── */}
       <nav style={{ flex: 1, padding: '8px 10px', overflowY: 'auto' }}>
-
-        {/* Reset Password group */}
-        <div style={{ marginBottom: 4 }}>
-          {!isCollapsed && (
-            <button
-              onClick={() => setResetOpen(o => !o)}
-              aria-expanded={resetOpen}
-              className="btn-ghost"
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '7px 10px', borderRadius: 8,
-                color: 'var(--text3)', fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
-                textTransform: 'uppercase',
-                cursor: 'pointer', border: 'none', background: 'transparent',
-              }}
-            >
-              <span>Reset Password</span>
-              <IcChevronDown open={resetOpen} />
-            </button>
-          )}
-
-          {(isCollapsed || resetOpen) && (
-            <div>
-              {[
-                { page: 'dashboard' as Page, label: 'Dashboard', icon: isCollapsed ? <IcKey size={17} /> : <IcDashboard size={15} /> },
-                { page: 'email'     as Page, label: 'Email',     icon: <IcEmailIcon size={15} /> },
-              ].map(({ page, label, icon }) => {
-                const active = current === page
-                return isCollapsed ? (
+        {isCollapsed
+          ? NAV_GROUPS.map((g, gi) => (
+              <div key={g.id}>
+                {gi > 0 && <div style={{ height: 1, background: 'var(--border)', margin: '8px 4px' }} />}
+                {g.items.map(it => (
+                  <CollapsedItem key={it.page} page={it.page} label={it.label}
+                    isActive={current === it.page} onNavigate={onNavigate} />
+                ))}
+              </div>
+            ))
+          : NAV_GROUPS.map(g => {
+              const open = openGroups[g.id] ?? true
+              return (
+                <div key={g.id} style={{ marginBottom: 4 }}>
                   <button
-                    key={page}
-                    onClick={() => onNavigate(page)}
-                    title={label}
-                    aria-current={active ? 'page' : undefined}
+                    onClick={() => toggleGroup(g.id)}
+                    aria-expanded={open}
+                    className="btn-ghost"
                     style={{
-                      width: '100%', display: 'flex', justifyContent: 'center',
-                      padding: '9px 0', borderRadius: 8, marginBottom: 2,
-                      background: active ? 'var(--accent-dim)' : 'transparent',
-                      color: active ? 'var(--accent)' : 'var(--text2)',
-                      border: active ? '1px solid var(--accent-glow)' : '1px solid transparent',
-                      cursor: 'pointer', transition: 'background .12s, color .12s',
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '7px 10px', borderRadius: 8,
+                      color: 'var(--text3)', fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
+                      textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'transparent',
                     }}
-                    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)' } }}
-                    onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
                   >
-                    {icon}
+                    <span>{g.label}</span>
+                    <IcChevronDown open={open} />
                   </button>
-                ) : (
-                  <button
-                    key={page}
-                    onClick={() => onNavigate(page)}
-                    aria-current={active ? 'page' : undefined}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                      padding: '8px 10px 8px 20px', borderRadius: 8, marginBottom: 2,
-                      background: active ? 'var(--accent-dim)' : 'transparent',
-                      color: active ? 'var(--accent)' : 'var(--text2)',
-                      fontSize: 15, fontWeight: active ? 600 : 400,
-                      border: active ? '1px solid var(--accent-glow)' : '1px solid transparent',
-                      transition: 'background .12s, color .12s, border-color .12s', cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)' } }}
-                    onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
-                  >
-                    {icon}
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        <div style={{ height: 1, background: 'var(--border)', margin: '8px 4px 8px' }} />
-
-        <NavItem page="knowledge" label="Knowledge" icon={<IcBook size={15} />}
-          isActive={current === 'knowledge'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
-
-        <NavItem page="calls" label="Chiamate" icon={<IcPhone size={15} />}
-          isActive={current === 'calls'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
-
-        <NavItem page="live" label="Chiamate Live" icon={<IcHeadset size={15} />}
-          isActive={current === 'live'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
-
-        <NavItem page="analytics" label="Analisi" icon={<IcChart size={15} />}
-          isActive={current === 'analytics'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
-
-        <NavItem page="tickets" label="Ticket" icon={<IcTicket size={15} />}
-          isActive={current === 'tickets'} isCollapsed={isCollapsed} onNavigate={onNavigate} />
-
-        <NavItem page="admin" label="Utenti" icon={<IcUsers size={15} />}
-          isActive={current === 'admin'} isCollapsed={isCollapsed} badge={userCount} onNavigate={onNavigate} />
+                  {open && (
+                    <div>
+                      {g.items.map(it => (
+                        <ExpandedItem key={it.page} page={it.page} label={it.label}
+                          isActive={current === it.page}
+                          badge={it.page === 'admin' ? userCount : undefined}
+                          onNavigate={onNavigate} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
       </nav>
 
       {/* ── Footer ── */}
