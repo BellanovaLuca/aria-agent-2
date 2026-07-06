@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark;
+  /* Dark — Cosmic Purple */
+  --gh-canvas:  8 7 18;
+  --gh-surface: 22 20 48;
+  --gh-s2:      30 28 58;
+  --gh-s3:      40 38 70;
+  --gh-border:  52 50 90;
+  --gh-border2: 68 66 116;
+  --gh-text:    242 240 255;
+  --gh-t2:      178 174 218;
+  --gh-t3:      118 114 162;
+  --gh-blue:    164 144 255;
+  --gh-blue2:   178 160 255;
+  --gh-blue3:   196 180 255;
+  --gh-green:   74 222 128;
+  --gh-red:     255 107 138;
+  --gh-amber:   251 191 36;
+  --gh-amber2:  253 211 77;
+
+  --bg:          #080712;
+  --sidebar:     #0d0c1e;
+  --surface:     #161430;
+  --surface2:    #1e1c3a;
+  --surface3:    #282646;
+  --border:      #343268;
+  --border2:     #444274;
+  --accent:      #a490ff;
+  --accent-dim:  #a490ff22;
+  --accent-glow: #a490ff44;
+  --cyan:        #22d8e8;
+  --cyan-dim:    #22d8e822;
+  --success:     #4ade80;
+  --success-dim: #4ade8022;
+  --danger:      #ff6b8a;
+  --danger-dim:  #ff6b8a22;
+  --warn:        #fbbf24;
+  --warn-dim:    #fbbf2422;
+  --text:        #f2f0ff;
+  --text2:       #b2aede;
+  --text3:       #7672a2;
+  --font:        'Geist', system-ui, -apple-system, sans-serif;
+  --display:     'Instrument Serif', Georgia, serif;
+  --mono:        'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+html.light {
+  color-scheme: light;
+  --gh-canvas:  246 248 250;
+  --gh-surface: 255 255 255;
+  --gh-s2:      243 244 246;
+  --gh-s3:      234 238 241;
+  --gh-border:  208 215 222;
+  --gh-border2: 175 184 193;
+  --gh-text:    31 35 40;
+  --gh-t2:      87 96 106;
+  --gh-t3:      110 118 129;
+  --gh-blue:    88 66 200;
+  --gh-blue2:   109 91 220;
+  --gh-blue3:   88 66 200;
+  --gh-green:   16 140 86;
+  --gh-red:     207 34 46;
+  --gh-amber:   154 97 0;
+  --gh-amber2:  154 97 0;
+
+  --bg:          #f6f8fa;
+  --sidebar:     #ffffff;
+  --surface:     #ffffff;
+  --surface2:    #f3f4f6;
+  --surface3:    #eaeeef;
+  --border:      #d0d7de;
+  --border2:     #afc0cc;
+  --accent:      #5842c8;
+  --accent-dim:  #5842c818;
+  --accent-glow: #5842c830;
+  --cyan:        #0891b2;
+  --cyan-dim:    #0891b218;
+  --success:     #16803e;
+  --success-dim: #16803e18;
+  --danger:      #cf222e;
+  --danger-dim:  #cf222e18;
+  --warn:        #9a6100;
+  --warn-dim:    #9a610018;
+  --text:        #1f2328;
+  --text2:       #57606a;
+  --text3:       #6e7781;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+  }
+
+  body {
+    background-color: rgb(var(--gh-canvas));
+    color: rgb(var(--gh-text));
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Global focus ring — applies to ALL buttons/links via :focus-visible */
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Themed scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: rgb(var(--gh-surface)); }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--gh-border2)); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--gh-t3)); }
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--gh-border2)) rgb(var(--gh-surface)); }
+}
+
+/* ── Components ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  /* Subtle dot-grid texture on the canvas background */
+  .dot-grid {
+    background-image: radial-gradient(circle at center, rgb(var(--gh-border2) / 0.5) 1px, transparent 1.5px);
+    background-size: 22px 22px;
+  }
+
+  /* Form input base style */
+  .field {
+    @apply w-full bg-gh-canvas border border-gh-border rounded-md px-3 py-2 text-sm text-gh-text
+      placeholder-gh-t3 font-mono
+      focus-visible:outline-none focus-visible:border-gh-blue focus-visible:ring-1 focus-visible:ring-gh-blue/30
+      transition-colors duration-150;
+  }
+
+  /* Display heading — Instrument Serif */
+  .heading-display {
+    font-family: var(--display);
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  /* Metric card hover glow */
+  .metric-glow:hover {
+    border-color: rgb(var(--gh-blue) / 0.30);
+    box-shadow: 0 0 0 1px rgb(var(--gh-blue) / 0.15), 0 4px 20px rgb(var(--gh-blue) / 0.12);
+  }
+
+  /* Generic ghost button — handles hover via CSS */
+  .btn-ghost {
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface2) !important;
+    color: var(--text) !important;
+  }
+  .btn-ghost:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Surface-bordered icon button */
+  .btn-icon {
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-icon:hover:not(:disabled) {
+    border-color: var(--border2) !important;
+    color: var(--text2) !important;
+  }
+
+  /* Tabular numbers for data columns */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Touch targets */
+  .touch-target {
+    touch-action: manipulation;
+  }
+}
+
+/* ── Dialog ───────────────────────────────────────────────────────────────── */
+
+dialog {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Call panel animations ────────────────────────────────────────────────── */
+
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.25); }
+  50%       { transform: scaleY(1); }
+}
+
+@keyframes fabPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.7); opacity: 1; }
+  50%  { box-shadow: 0 0 0 14px rgba(239,68,68,0); opacity: 0.65; }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 1; }
+}
+
+@keyframes callPanelIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── Staggered page sections ──────────────────────────────────────────────── */
+
+@keyframes sectionIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section-in {
+  animation: sectionIn 0.24s ease-out both;
+}
+
+/* ── Reduced-motion — catch-all ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

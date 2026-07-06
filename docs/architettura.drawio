@@ -1,0 +1,108 @@
+<mxfile host="app.diagrams.net" agent="aria-agent-docs" version="24.0.0">
+  <diagram id="arch-tav-01" name="TAV.01 — Architettura di sistema">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ═══ Contenitori (sfondo) ═══ -->
+        <mxCell id="zoneAws" value="AWS — AMBIENTE DI PRODUZIONE" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontFamily=Courier New;fontSize=11;fontStyle=1;fontColor=#D9650F;fillColor=#FCF5EE;strokeColor=#D9650F;strokeWidth=2;container=0;" vertex="1" parent="1">
+          <mxGeometry x="490" y="60" width="760" height="910" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneVpc" value="VPC · SUBNET PRIVATE" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontFamily=Courier New;fontSize=10;fontStyle=1;fontColor=#1A5276;fillColor=#F4F7FA;strokeColor=#1A5276;strokeWidth=1.5;dashed=1;dashPattern=7 5;container=0;" vertex="1" parent="1">
+          <mxGeometry x="510" y="95" width="540" height="850" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneOnprem" value="DATACENTER ON-PREMISE" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontFamily=Courier New;fontSize=10;fontStyle=1;fontColor=#5C6670;fillColor=#F4F4F2;strokeColor=#5C6670;strokeWidth=1.5;dashed=1;dashPattern=3 4;container=0;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="600" width="280" height="360" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Nodi — canale voce ═══ -->
+        <mxCell id="userPhone" value="&lt;b&gt;Utente · telefono&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;chiamata al service desk,&lt;br&gt;deviata al numero dedicato AI&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="120" width="182" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="sipTrunk" value="&lt;b&gt;SIP Trunk&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;carrier / Chime SDK&lt;br&gt;Voice Connector&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="250" y="120" width="192" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="livekit" value="&lt;b&gt;LiveKit self-hosted&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;livekit-server + livekit-sip&lt;br&gt;EKS/ECS · Redis · room per chiamata&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="535" y="120" width="217" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="voiceAgent" value="&lt;b&gt;Voice Agent Worker&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;ECS Fargate · Python · LiveKit Agents&lt;br&gt;livekit-plugins-aws[realtime]&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="120" width="227" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrockVoice" value="&lt;b&gt;Amazon Bedrock&lt;br&gt;Nova Sonic 2&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;STT+LLM+TTS · it-IT&lt;br&gt;via VPC endpoint&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=11;fillColor=#FDFCF7;strokeColor=#C75B12;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="120" width="155" height="96" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Nodi — canale testo ═══ -->
+        <mxCell id="userWeb" value="&lt;b&gt;Utente · web chat&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;portale aziendale / widget dedicato&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="730" width="182" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeWeb" value="&lt;b&gt;CloudFront + WAF&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;API Gateway WebSocket&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="250" y="730" width="192" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="textAgent" value="&lt;b&gt;Text Agent Service&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;ECS Fargate · Python&lt;br&gt;stessi tool del canale voce&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="535" y="730" width="217" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrockText" value="&lt;b&gt;Amazon Bedrock&lt;br&gt;Nova / Claude&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;LLM testuale&lt;br&gt;via VPC endpoint&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=11;fillColor=#FDFCF7;strokeColor=#0E7490;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="730" width="155" height="96" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Core ═══ -->
+        <mxCell id="orchestrator" value="&lt;b style=&quot;font-size:14px&quot;&gt;Unlock Orchestrator&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;ECS Fargate · multi-AZ · ALB interno&lt;br&gt;identify_user · get_account_status · unlock_account · escalate&lt;br&gt;&lt;b&gt;default-deny: il ticket è precondizione di ogni unlock&lt;/b&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=2.5;verticalAlign=middle;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="625" y="430" width="332" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Data strip ═══ -->
+        <mxCell id="dynamo" value="&lt;b&gt;DynamoDB&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px&quot;&gt;richieste · idempotency&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=10;fillColor=#FDFCF7;strokeColor=#8A8378;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="535" y="870" width="118" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="&lt;b&gt;S3 + KMS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px&quot;&gt;trascrizioni · 90 gg&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=10;fillColor=#FDFCF7;strokeColor=#8A8378;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="665" y="870" width="118" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets" value="&lt;b&gt;Secrets Mgr&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px&quot;&gt;OAuth SN · rotazione&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=10;fillColor=#FDFCF7;strokeColor=#8A8378;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="795" y="870" width="118" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cloudwatch" value="&lt;b&gt;CloudWatch&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px&quot;&gt;log JSON · KPI · allarmi&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=10;fillColor=#FDFCF7;strokeColor=#8A8378;strokeWidth=1.2;" vertex="1" parent="1">
+          <mxGeometry x="925" y="870" width="118" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Esterni ═══ -->
+        <mxCell id="servicenow" value="&lt;b style=&quot;font-size:13px&quot;&gt;ServiceNow&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;SaaS · sistema di record&lt;br&gt;ticket per ogni richiesta&lt;br&gt;IntegrationHub · Microsoft AD Spoke&lt;br&gt;&lt;b&gt;correlation_id su ogni ticket&lt;/b&gt;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#2F7D32;strokeWidth=2;verticalAlign=middle;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="380" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="midServer" value="&lt;b&gt;MID Server&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Windows · rete interna&lt;br&gt;esegue le azioni AD Spoke&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="650" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ad" value="&lt;b&gt;Active Directory&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Domain Controllers&lt;br&gt;Get-ADUser · Unlock-ADAccount&lt;br&gt;service account a delega minima&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=12;fillColor=#FDFCF7;strokeColor=#1C2733;strokeWidth=1.5;verticalAlign=middle;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="790" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ═══ Flussi voce (arancio) ═══ -->
+        <mxCell id="e1" value="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C75B12;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#C75B12;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="userPhone" target="sipTrunk"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="2 · SIP/SRTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C75B12;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#C75B12;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="sipTrunk" target="livekit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="3 · WebRTC" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C75B12;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#C75B12;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="livekit" target="voiceAgent"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="4 · speech-to-speech" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C75B12;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#C75B12;labelBackgroundColor=#FDFCF7;startArrow=classic;startFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="voiceAgent" target="bedrockVoice"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ═══ Flussi testo (teal) ═══ -->
+        <mxCell id="e5a" value="5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E7490;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#0E7490;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="userWeb" target="edgeWeb"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5b" value="WSS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E7490;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#0E7490;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="edgeWeb" target="textAgent"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5c" value="Converse API · tool use" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E7490;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#0E7490;labelBackgroundColor=#FDFCF7;startArrow=classic;startFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="textAgent" target="bedrockText"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ═══ Orchestrazione (ink) ═══ -->
+        <mxCell id="e6a" value="6 · tool call HTTPS interno" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1C2733;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#1C2733;labelBackgroundColor=#FDFCF7;exitX=0.5;exitY=1;entryX=0.85;entryY=0;" edge="1" parent="1" source="voiceAgent" target="orchestrator"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6b" value="6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1C2733;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#1C2733;labelBackgroundColor=#FDFCF7;exitX=0.5;exitY=0;entryX=0.05;entryY=1;" edge="1" parent="1" source="textAgent" target="orchestrator"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ═══ Integrazioni esterne (verde) ═══ -->
+        <mxCell id="e7" value="7 · OAuth2 REST — ticket + flow AD Spoke" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2F7D32;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#2F7D32;labelBackgroundColor=#FDFCF7;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="orchestrator" target="servicenow"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="coda MID (outbound)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2F7D32;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#2F7D32;labelBackgroundColor=#FDFCF7;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="servicenow" target="midServer"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" value="8 · PowerShell" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2F7D32;strokeWidth=2;fontFamily=Courier New;fontSize=10;fontColor=#2F7D32;labelBackgroundColor=#FDFCF7;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="midServer" target="ad"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ═══ Audit (grigio tratteggiato) ═══ -->
+        <mxCell id="e10" value="stato · trascrizioni · secret · metriche" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8A8378;strokeWidth=1.5;dashed=1;fontFamily=Courier New;fontSize=10;fontColor=#8A8378;labelBackgroundColor=#FDFCF7;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="orchestrator" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8A8378;strokeWidth=1.5;dashed=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="orchestrator" target="dynamo"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8A8378;strokeWidth=1.5;dashed=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="orchestrator" target="secrets"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8A8378;strokeWidth=1.5;dashed=1;exitX=0.95;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="orchestrator" target="cloudwatch"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
