@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiGet, apiPost } from '../hooks/useApi'
 import { ScrollToTop } from '../components/ScrollToTop'
-import { IcRefresh, IcStar } from '../components/icons'
+import { MetricCard } from '../components/MetricCard'
+import { IcRefresh, IcStar, IcPhone, IcWeb, IcHeadset } from '../components/icons'
 import type { TranscriptAnalysis, AnalyticsSummary, ToastItem } from '../types'
 
 interface Props {
@@ -24,6 +25,18 @@ const INTENT_LABEL: Record<string, string> = {
   sblocco: 'Sblocco',
   domanda: 'Domanda',
   altro: 'Altro',
+}
+
+// Canale della chiamata dal nome file (…_web-xxxx.txt = sessione web).
+function isWebCall(filename: string): boolean {
+  return /web-/.test(filename)
+}
+// Label senza il marcatore di canale (l'icona lo rappresenta già); gestisce
+// anche le analisi salvate in passato con emoji nella label.
+function labelText(label: string): string {
+  const i = label.indexOf('—')
+  const rest = i !== -1 ? label.slice(i + 1) : label
+  return rest.replace(/[\u{1F310}\u{1F4DE}]/gu, '').trim()
 }
 
 function Chip({ label, color }: { label: string; color: string }) {
@@ -96,6 +109,28 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+/* ── Icone card metriche (ref stabili → memo di MetricCard preservata) ────── */
+const IC_TOTAL = (<svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M2 3a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm9 0a1 1 0 011-1h5a1 1 0 011 1v2a1 1 0 01-1 1h-5a1 1 0 01-1-1V3zm0 6a1 1 0 011-1h5a1 1 0 011 1v8a1 1 0 01-1 1h-5a1 1 0 01-1-1V9zM2 13a1 1 0 011-1h5a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1v-4z"/></svg>)
+const IC_POS = (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16"><circle cx="10" cy="10" r="7.5"/><path d="M7 11.5q3 2.5 6 0" strokeLinecap="round"/><circle cx="7.6" cy="8" r=".85" fill="currentColor" stroke="none"/><circle cx="12.4" cy="8" r=".85" fill="currentColor" stroke="none"/></svg>)
+const IC_NEU = (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16"><circle cx="10" cy="10" r="7.5"/><path d="M7 12h6" strokeLinecap="round"/><circle cx="7.6" cy="8" r=".85" fill="currentColor" stroke="none"/><circle cx="12.4" cy="8" r=".85" fill="currentColor" stroke="none"/></svg>)
+const IC_NEG = (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16"><circle cx="10" cy="10" r="7.5"/><path d="M7 13q3-2.5 6 0" strokeLinecap="round"/><circle cx="7.6" cy="8" r=".85" fill="currentColor" stroke="none"/><circle cx="12.4" cy="8" r=".85" fill="currentColor" stroke="none"/></svg>)
+const IC_ESC  = <IcHeadset size={15} />
+
+// Riquadro qualità mostrato a destra nella card "hero" (come i visual della Panoramica).
+function QualityHeroVisual({ avg, total }: { avg: number; total: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)' }}>Qualità media</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="tabular" style={{ fontSize: 40, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
+          {total > 0 ? avg.toFixed(1) : '—'}
+        </span>
+        {total > 0 && <Stars score={Math.round(avg)} />}
+      </div>
+    </div>
+  )
+}
+
 export function Analytics({ addToast, onOpenTranscript }: Props) {
   const [analyses, setAnalyses] = useState<TranscriptAnalysis[]>([])
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
@@ -104,6 +139,7 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
   const [analyzing, setAnalyzing] = useState(false)
   const [auto, setAuto] = useState(() => localStorage.getItem('aria-analytics-auto') === 'true')
   const [page, setPage] = useState(0)
+  const [activeFilter, setActiveFilter] = useState<'positivo' | 'neutro' | 'negativo' | 'escalation' | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async (spinner = false) => {
@@ -148,17 +184,42 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
     return () => { active = false; clearInterval(id) }
   }, [auto, analyzePending])
 
-  const totalPages = Math.max(1, Math.ceil(analyses.length / PAGE_SIZE))
+  // Filtri per sentiment (stile Panoramica): le card metriche filtrano l'elenco.
+  const clearFilter      = useCallback(() => setActiveFilter(null), [])
+  const filterPositivo   = useCallback(() => setActiveFilter(f => f === 'positivo' ? null : 'positivo'), [])
+  const filterNeutro     = useCallback(() => setActiveFilter(f => f === 'neutro' ? null : 'neutro'), [])
+  const filterNegativo   = useCallback(() => setActiveFilter(f => f === 'negativo' ? null : 'negativo'), [])
+  const filterEscalation = useCallback(() => setActiveFilter(f => f === 'escalation' ? null : 'escalation'), [])
+  useEffect(() => { setPage(0) }, [activeFilter])
+
+  const total = summary?.total ?? 0
+  const bySentiment = summary?.by_sentiment ?? {}
+  const positivi = bySentiment['positivo'] ?? 0
+  const neutri = bySentiment['neutro'] ?? 0
+  const negativi = bySentiment['negativo'] ?? 0
+  const escalation = summary?.by_outcome?.['escalation'] ?? 0
+
+  // Meta (etichetta+colore) del filtro attivo: sentiment o escalation.
+  const filterMeta = !activeFilter
+    ? null
+    : activeFilter === 'escalation' ? OUTCOME_META.escalation : SENTIMENT_META[activeFilter]
+
+  const filtered = !activeFilter
+    ? analyses
+    : activeFilter === 'escalation'
+      ? analyses.filter(a => a.outcome === 'escalation')
+      : analyses.filter(a => a.sentiment === activeFilter)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages - 1)
-  const paged = analyses.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+  const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <div ref={scrollRef} style={{ padding: '28px 32px', height: '100%', overflowY: 'auto' }}>
       {/* Header */}
       <div className="section-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
         <div>
-          <h1 className="heading-display" style={{ fontSize: 28, color: 'var(--text)', marginBottom: 4 }}>Analisi delle chiamate</h1>
-          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Qualità, esito e sentiment estratti dalle trascrizioni con AI</p>
+          <h1 className="heading-display" style={{ fontSize: 28, color: 'var(--text)', marginBottom: 4 }}>Sentiment delle chiamate</h1>
+          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Umore dei clienti e qualità del servizio estratti dalle trascrizioni con AI</p>
         </div>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -190,28 +251,67 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
         </div>
       ) : (
         <>
-          {/* Sintesi */}
-          <div className="section-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Trascrizioni analizzate</div>
-              <div className="tabular" style={{ fontSize: 32, fontWeight: 700, color: 'var(--text)' }}>{summary?.total ?? 0}</div>
+          {/* Sintesi — stile Panoramica: card metriche cliccabili come filtri */}
+          <div className="section-in" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            <MetricCard
+              hero
+              label="Trascrizioni analizzate"
+              value={total}
+              sub={`${total} conversazioni analizzate con AI`}
+              color="var(--text)"
+              glow="var(--accent)"
+              onClick={clearFilter}
+              icon={IC_TOTAL}
+              visual={<QualityHeroVisual avg={summary?.avg_quality ?? 0} total={total} />}
+            />
+            <div style={{ display: 'flex', gap: 12 }}>
+              <MetricCard label="Positivo" value={positivi}
+                sub={total > 0 ? `${Math.round(positivi / total * 100)}% del totale` : '—'}
+                color="var(--success)" glow="var(--success)"
+                onClick={filterPositivo} active={activeFilter === 'positivo'} icon={IC_POS} />
+              <MetricCard label="Neutro" value={neutri}
+                sub={total > 0 ? `${Math.round(neutri / total * 100)}% del totale` : '—'}
+                color="#8b96a5" glow="#8b96a5"
+                onClick={filterNeutro} active={activeFilter === 'neutro'} icon={IC_NEU} />
+              <MetricCard label="Negativo" value={negativi}
+                sub={total > 0 ? `${Math.round(negativi / total * 100)}% del totale` : '—'}
+                color="var(--danger)" glow="var(--danger)"
+                onClick={filterNegativo} active={activeFilter === 'negativo'} icon={IC_NEG} />
+              <MetricCard label="Escalation" value={escalation}
+                sub={total > 0 ? `${Math.round(escalation / total * 100)}% del totale` : '—'}
+                color="var(--warn)" glow="var(--warn)"
+                onClick={filterEscalation} active={activeFilter === 'escalation'} icon={IC_ESC} />
             </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Qualità media</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="tabular" style={{ fontSize: 32, fontWeight: 700, color: 'var(--text)' }}>{summary?.avg_quality?.toFixed(1) ?? '—'}</span>
-                {summary && summary.total > 0 && <Stars score={Math.round(summary.avg_quality)} />}
-              </div>
-            </div>
-            <Distribution title="Esiti" data={summary?.by_outcome ?? {}} meta={OUTCOME_META} />
-            <Distribution title="Sentiment" data={summary?.by_sentiment ?? {}} meta={SENTIMENT_META} />
-            <Distribution title="Motivo del contatto" data={summary?.by_intent ?? {}} />
           </div>
 
+          {/* Distribuzione per motivo del contatto */}
+          {total > 0 && (
+            <div className="section-in" style={{ animationDelay: '60ms', marginBottom: 20 }}>
+              <Distribution title="Motivo del contatto" data={summary?.by_intent ?? {}} />
+            </div>
+          )}
+
           {/* Elenco analisi */}
-          <div className="section-in" style={{ animationDelay: '80ms', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)' }}>Dettaglio ({analyses.length})</span>
+          <div className="section-in" style={{ animationDelay: '120ms', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)' }}>Dettaglio</span>
+                {filterMeta && (
+                  <button onClick={clearFilter} style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '2px 8px 2px 10px', borderRadius: 20,
+                    background: `${filterMeta.color}22`,
+                    border: `1px solid ${filterMeta.color}`,
+                    color: filterMeta.color, fontSize: 11, fontWeight: 600, cursor: 'pointer', lineHeight: 1.6,
+                  }}>
+                    {filterMeta.label}
+                    <span style={{ fontSize: 13, lineHeight: 1 }}>×</span>
+                  </button>
+                )}
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                {activeFilter ? `${filtered.length} / ${analyses.length}` : analyses.length} voci
+              </span>
             </div>
             {analyses.length === 0 ? (
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>
@@ -219,15 +319,27 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
                   ? 'Nessuna analisi ancora. Le chiamate registrate vengono analizzate automaticamente.'
                   : <>Analisi disattivata. Attiva l&apos;<strong>Analisi automatica</strong> qui sopra per generarle dalle chiamate registrate.</>}
               </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 14 }}>
+                Nessuna analisi con questo esito.
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={clearFilter} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font)' }}>Rimuovi filtro</button>
+                </div>
+              </div>
             ) : (
               <>
                 {paged.map((a) => (
                   <div key={a.filename} style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{a.label}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                        <span style={{ color: 'var(--text3)', display: 'flex' }} aria-hidden="true">
+                          {isWebCall(a.filename) ? <IcWeb size={14} /> : <IcPhone size={14} />}
+                        </span>
+                        {labelText(a.label)}
+                      </span>
                       <Chip label={INTENT_LABEL[a.intent] ?? a.intent} color="var(--accent)" />
-                      <Chip label={OUTCOME_META[a.outcome]?.label ?? a.outcome} color={OUTCOME_META[a.outcome]?.color ?? '#8b96a5'} />
                       <Chip label={SENTIMENT_META[a.sentiment]?.label ?? a.sentiment} color={SENTIMENT_META[a.sentiment]?.color ?? '#8b96a5'} />
+                      {a.outcome === 'escalation' && <Chip label="Escalation" color="var(--warn)" />}
                       <span style={{ marginLeft: 'auto' }}><Stars score={a.quality_score} /></span>
                     </div>
                     <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 5 }}>{a.summary}</div>
@@ -245,7 +357,7 @@ export function Analytics({ addToast, onOpenTranscript }: Props) {
                 {totalPages > 1 && (
                   <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span className="tabular" style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, analyses.length)} di {analyses.length}
+                      {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} di {filtered.length}
                     </span>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                       <button onClick={() => setPage(Math.max(0, safePage - 1))} disabled={safePage === 0}

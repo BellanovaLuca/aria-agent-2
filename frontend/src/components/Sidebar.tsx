@@ -18,16 +18,16 @@ interface NavItemDef { page: Page; label: string }
 interface NavGroup { id: string; label: string; items: NavItemDef[] }
 
 const NAV_GROUPS: NavGroup[] = [
-  { id: 'conversazioni', label: 'Conversazioni', items: [
-    { page: 'calls', label: 'Chiamate' },
-    { page: 'live', label: 'Chiamate Live' },
-    { page: 'analytics', label: 'Analisi' },
-  ] },
   { id: 'supporto', label: 'Supporto', items: [
     { page: 'dashboard', label: 'Panoramica' },
     { page: 'email', label: 'Email' },
     { page: 'knowledge', label: 'Knowledge' },
     { page: 'tickets', label: 'Ticket' },
+  ] },
+  { id: 'conversazioni', label: 'Conversazioni', items: [
+    { page: 'calls', label: 'Chiamate' },
+    { page: 'live', label: 'Chiamate Live' },
+    { page: 'analytics', label: 'Sentiment' },
   ] },
   { id: 'amministrazione', label: 'Amministrazione', items: [
     { page: 'admin', label: 'Utenti' },

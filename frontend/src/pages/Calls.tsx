@@ -86,6 +86,8 @@ interface Props {
 }
 
 const PAGE_SIZE = 8
+// Righe di dialogo per pagina quando una trascrizione è troppo lunga.
+const LINES_PER_PAGE = 25
 
 export function Calls({ addToast, openFilename, onOpened }: Props) {
   const [transcripts, setTranscripts] = useState<TranscriptMeta[]>([])
@@ -94,6 +96,7 @@ export function Calls({ addToast, openFilename, onOpened }: Props) {
   const [cache, setCache]       = useState<Record<string, string>>({})
   const [fetching, setFetching] = useState<Set<string>>(new Set())
   const [page, setPage]         = useState(0)
+  const [linePage, setLinePage] = useState(0)
   const [dateFilter, setDateFilter] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -117,6 +120,9 @@ export function Calls({ addToast, openFilename, onOpened }: Props) {
   }, [load])
 
   useEffect(() => { load() }, [load])
+
+  // Torna alla prima pagina delle righe quando si apre un'altra trascrizione.
+  useEffect(() => { setLinePage(0) }, [expanded])
 
   // Apre la trascrizione richiesta da un deep-link: azzera i filtri, va alla
   // pagina giusta, espande la voce e ne carica il contenuto.
@@ -301,6 +307,9 @@ export function Calls({ addToast, openFilename, onOpened }: Props) {
               const content = cache[t.filename]
               const isFetching = fetching.has(t.filename)
               const lines = open && content ? parseChat(content) : []
+              const lineTotalPages = Math.max(1, Math.ceil(lines.length / LINES_PER_PAGE))
+              const safeLinePage = Math.min(linePage, lineTotalPages - 1)
+              const pagedLines = lines.slice(safeLinePage * LINES_PER_PAGE, (safeLinePage + 1) * LINES_PER_PAGE)
               const { caller } = parseLabel(t.label)
               const callerLabel = caller || (phone ? 'Chiamata anonima' : 'Sessione web')
               const globalIdx = transcriptIndexMap.get(t.filename) ?? 0
@@ -360,30 +369,51 @@ export function Calls({ addToast, openFilename, onOpened }: Props) {
                             <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
                               Nessun dialogo disponibile.
                             </div>
-                          ) : lines.map((line, j) => (
-                            <div key={j} style={{
-                              padding: '12px 16px',
-                              borderBottom: j < lines.length - 1 ? '1px solid var(--border)' : 'none',
-                              display: 'flex', gap: 12, alignItems: 'flex-start',
-                            }}>
-                              <div style={{
-                                width: 6, height: 6, borderRadius: '50%', marginTop: 6, flexShrink: 0,
-                                background: line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)',
-                                boxShadow: `0 0 4px ${line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)'}`,
-                              }} />
-                              <div>
-                                <span style={{
-                                  fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-                                  textTransform: 'uppercase',
-                                  color: line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)',
-                                  marginRight: 8,
-                                }}>
-                                  {line.speaker === 'agent' ? 'Sofia' : 'Utente'}
-                                </span>
-                                <span style={{ fontSize: 13, color: 'var(--text2)' }}>{highlight(line.text, searchQuery)}</span>
-                              </div>
-                            </div>
-                          ))}
+                          ) : (
+                            <>
+                              {pagedLines.map((line, j) => {
+                                const gj = safeLinePage * LINES_PER_PAGE + j
+                                return (
+                                  <div key={gj} style={{
+                                    padding: '12px 16px',
+                                    borderBottom: j < pagedLines.length - 1 ? '1px solid var(--border)' : 'none',
+                                    display: 'flex', gap: 12, alignItems: 'flex-start',
+                                  }}>
+                                    <div style={{
+                                      width: 6, height: 6, borderRadius: '50%', marginTop: 6, flexShrink: 0,
+                                      background: line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)',
+                                      boxShadow: `0 0 4px ${line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)'}`,
+                                    }} />
+                                    <div>
+                                      <span style={{
+                                        fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+                                        textTransform: 'uppercase',
+                                        color: line.speaker === 'agent' ? 'var(--accent)' : 'var(--success)',
+                                        marginRight: 8,
+                                      }}>
+                                        {line.speaker === 'agent' ? 'Sofia' : 'Utente'}
+                                      </span>
+                                      <span style={{ fontSize: 13, color: 'var(--text2)' }}>{highlight(line.text, searchQuery)}</span>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                              {lineTotalPages > 1 && (
+                                <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)' }}>
+                                    Righe {safeLinePage * LINES_PER_PAGE + 1}–{Math.min((safeLinePage + 1) * LINES_PER_PAGE, lines.length)} di {lines.length}
+                                  </span>
+                                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                    <button onClick={() => setLinePage(p => Math.max(0, p - 1))} disabled={safeLinePage === 0}
+                                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: safeLinePage === 0 ? 'var(--text3)' : 'var(--text)', fontSize: 11, cursor: safeLinePage === 0 ? 'not-allowed' : 'pointer' }}>← Prec</button>
+                                    <span className="tabular" style={{ padding: '4px 8px', fontSize: 11, color: 'var(--text2)' }}>{safeLinePage + 1} / {lineTotalPages}</span>
+                                    <button onClick={() => setLinePage(p => Math.min(lineTotalPages - 1, p + 1))} disabled={safeLinePage >= lineTotalPages - 1}
+                                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: safeLinePage >= lineTotalPages - 1 ? 'var(--text3)' : 'var(--text)', fontSize: 11, cursor: safeLinePage >= lineTotalPages - 1 ? 'not-allowed' : 'pointer' }}>Succ →</button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
