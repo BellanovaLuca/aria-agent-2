@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiGet, apiDelete, apiPost, apiUpload } from '../hooks/useApi'
 import { ScrollToTop } from '../components/ScrollToTop'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { IcRefresh, IcTrash, IcUpload, IcSearch } from '../components/icons'
+import { IcRefresh, IcTrash, IcUpload, IcSearch, IcChevron } from '../components/icons'
 import { fmtTs } from '../utils'
 import type { KnowledgeDoc, KnowledgeHit, ToastItem } from '../types'
 
@@ -20,6 +20,9 @@ export function Knowledge({ addToast }: Props) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeDoc | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [content, setContent] = useState<Record<string, string>>({})
+  const [loadingContent, setLoadingContent] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -47,6 +50,24 @@ export function Knowledge({ addToast }: Props) {
   }, [load])
 
   useEffect(() => { load() }, [load])
+
+  // Espande un documento e ne carica il contenuto (ricostruito dai chunk).
+  const toggleDoc = useCallback(async (id: string) => {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (content[id] === undefined) {
+      setLoadingContent(id)
+      try {
+        const res = await apiGet<{ text: string }>(`/knowledge/documents/${id}/content`)
+        setContent(c => ({ ...c, [id]: res.text }))
+      } catch {
+        addToast('error', 'Impossibile caricare il contenuto del documento.')
+        setContent(c => ({ ...c, [id]: '' }))
+      } finally {
+        setLoadingContent(null)
+      }
+    }
+  }, [expanded, content, addToast])
 
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true)
@@ -217,30 +238,50 @@ export function Knowledge({ addToast }: Props) {
             Nessun documento indicizzato. Caricane uno per abilitare la Q&A dell'assistente.
           </div>
         ) : (
-          docs.map((d) => (
-            <div key={d.id}
-              style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, transition: 'background .12s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 3, wordBreak: 'break-all' }}>{d.filename}</span>
-                <div className="tabular" style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', gap: 16 }}>
-                  <span>{d.chunk_count} frammenti</span>
-                  <span>Caricato: {fmtTs(d.uploaded_at)}</span>
+          docs.map((d) => {
+            const isOpen = expanded === d.id
+            return (
+              <div key={d.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button onClick={() => toggleDoc(d.id)} aria-expanded={isOpen}
+                    style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                    <span style={{ color: 'var(--text3)', display: 'flex', flexShrink: 0, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>
+                      <IcChevron open={false} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 3, wordBreak: 'break-all' }}>{d.filename}</span>
+                      <span className="tabular" style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', gap: 16 }}>
+                        <span>{d.chunk_count} frammenti</span>
+                        <span>Caricato: {fmtTs(d.uploaded_at)}</span>
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(d)}
+                    aria-label={`Elimina ${d.filename}`}
+                    style={{ padding: 8, borderRadius: 8, background: 'var(--danger-dim)', border: '1px solid #f8717140', color: 'var(--danger)', cursor: 'pointer', display: 'flex', flexShrink: 0, transition: 'background .15s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8717130' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--danger-dim)' }}
+                  >
+                    <IcTrash />
+                  </button>
                 </div>
+                {isOpen && (
+                  <div style={{ padding: '0 20px 16px 44px' }}>
+                    {loadingContent === d.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text3)', fontSize: 13, padding: '8px 0' }}>
+                        <div className="w-4 h-4 border-2 border-gh-blue border-t-transparent rounded-full animate-spin" /> Caricamento contenuto…
+                      </div>
+                    ) : (
+                      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', maxHeight: 360, overflowY: 'auto', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {content[d.id] || '(nessun testo estraibile)'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <button
-                onClick={() => setDeleteTarget(d)}
-                aria-label={`Elimina ${d.filename}`}
-                style={{ padding: 8, borderRadius: 8, background: 'var(--danger-dim)', border: '1px solid #f8717140', color: 'var(--danger)', cursor: 'pointer', display: 'flex', flexShrink: 0, transition: 'background .15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#f8717130' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--danger-dim)' }}
-              >
-                <IcTrash />
-              </button>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 

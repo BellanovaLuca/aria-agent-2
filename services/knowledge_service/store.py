@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 from qdrant_client import QdrantClient, models
 
-from chunker import Chunk
+from chunker import Chunk, OVERLAP_WORDS
 
 EmbedFn = Callable[[list[str], str], list[list[float]]]
 
@@ -141,6 +141,38 @@ class KnowledgeStore:
             if offset is None:
                 break
         return sorted(docs.values(), key=lambda d: d.uploaded_at, reverse=True)
+
+    def document_content(self, doc_id: str) -> tuple[str, str] | None:
+        """Ricostruisce (filename, testo) di un documento dai suoi chunk.
+
+        I chunk hanno una sovrapposizione di OVERLAP_WORDS parole: per ricomporre
+        il testo si prende il primo chunk intero e, dai successivi, si scartano le
+        prime OVERLAP_WORDS parole (già presenti nel chunk precedente).
+        """
+        payloads: list[dict] = []
+        offset = None
+        while True:
+            recs, offset = self._client.scroll(
+                self.collection,
+                limit=256,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+                scroll_filter=models.Filter(
+                    must=[models.FieldCondition(key="doc_id", match=models.MatchValue(value=doc_id))]
+                ),
+            )
+            payloads.extend(r.payload or {} for r in recs)
+            if offset is None:
+                break
+        if not payloads:
+            return None
+        ordered = sorted(payloads, key=lambda p: p.get("chunk_index", 0))
+        words: list[str] = []
+        for i, p in enumerate(ordered):
+            w = p.get("text", "").split()
+            words.extend(w if i == 0 else w[OVERLAP_WORDS:])
+        return ordered[0].get("filename", "(sconosciuto)"), " ".join(words)
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
         """Restituisce i chunk più rilevanti per la query, ordinati per score."""

@@ -110,6 +110,12 @@ class SearchResponse(BaseModel):
     hits: list[SearchHitOut]
 
 
+class DocumentContentOut(BaseModel):
+    doc_id: str
+    filename: str
+    text: str
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -121,6 +127,16 @@ def health() -> dict:
 def list_documents() -> list[DocumentOut]:
     docs = get_store().list_documents()
     return [DocumentOut(**vars(d)) for d in docs]
+
+
+@app.get("/documents/{doc_id}/content", response_model=DocumentContentOut)
+def document_content(doc_id: str) -> DocumentContentOut:
+    """Restituisce il testo del documento, ricostruito dai suoi chunk indicizzati."""
+    result = get_store().document_content(doc_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    filename, text = result
+    return DocumentContentOut(doc_id=doc_id, filename=filename, text=text)
 
 
 @app.post("/documents", response_model=DocumentOut, status_code=201)
