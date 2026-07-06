@@ -36,7 +36,7 @@ def test_summarize_aggregates():
 
 
 def test_label_for():
-    assert "Telefono" in label_for("20260422_220739_call-_test1234_ABC.txt")
+    assert "Telefono" in label_for("20260422_220739_call-_caller99_ABC.txt")
     assert "Web" in label_for("20260423_090248_web-54dbeedb.txt")
     assert label_for("strano.txt") == "strano.txt"
 
