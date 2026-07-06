@@ -28,9 +28,11 @@ from livekit.agents.llm import ChatMessage
 from livekit.agents.voice.events import ConversationItemAddedEvent, UserInputTranscribedEvent
 from livekit.plugins.google import realtime as google_realtime
 
-# sys.path consente l'import di voice_agent.tools dalla root del progetto
+# sys.path: la cartella del servizio (per il modulo locale `tools`) e la radice
+# del repo (per `shared`, importato da tools).
 sys.path.insert(0, str(_ROOT))
-from voice_agent.tools import (
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tools import (
     check_ticket_status,
     open_support_ticket,
     reset_user_password,
