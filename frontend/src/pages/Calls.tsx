@@ -80,11 +80,14 @@ function parseChat(raw: string): ChatLine[] {
 
 interface Props {
   addToast: (type: ToastItem['type'], msg: string) => void
+  // Deep-link da un'altra pagina (es. Analisi): apre questa trascrizione.
+  openFilename?: string | null
+  onOpened?: () => void
 }
 
 const PAGE_SIZE = 8
 
-export function Calls({ addToast }: Props) {
+export function Calls({ addToast, openFilename, onOpened }: Props) {
   const [transcripts, setTranscripts] = useState<TranscriptMeta[]>([])
   const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -114,6 +117,29 @@ export function Calls({ addToast }: Props) {
   }, [load])
 
   useEffect(() => { load() }, [load])
+
+  // Apre la trascrizione richiesta da un deep-link: azzera i filtri, va alla
+  // pagina giusta, espande la voce e ne carica il contenuto.
+  useEffect(() => {
+    if (!openFilename || !transcripts.length) return
+    const idx = transcripts.findIndex(t => t.filename === openFilename)
+    if (idx !== -1) {
+      setDateFilter('')
+      setSearchQuery('')
+      setPage(Math.floor(idx / PAGE_SIZE))
+      setExpanded(openFilename)
+      if (!cache[openFilename]) {
+        fetch(`/transcripts/${encodeURIComponent(openFilename)}`)
+          .then(r => (r.ok ? r.text() : ''))
+          .then(text => setCache(p => ({ ...p, [openFilename]: text })))
+          .catch(() => {})
+      }
+    } else {
+      addToast('info', 'Trascrizione non più disponibile.')
+    }
+    onOpened?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openFilename, transcripts])
 
   const toggleExpand = async (filename: string) => {
     if (expanded === filename) { setExpanded(null); return }

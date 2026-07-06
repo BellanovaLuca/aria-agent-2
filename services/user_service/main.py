@@ -601,7 +601,9 @@ def get_operator_token(room: str = Query(..., min_length=1, max_length=128)):
 
 # ── Endpoints trascrizioni (per il frontend React) ────────────────────────────
 
-_TRANSCRIPTS_DIR = _ROOT / "transcripts"
+# Override via TRANSCRIPTS_DIR (in Docker le trascrizioni sono montate qui);
+# default: cartella transcripts/ nella radice del repo.
+_TRANSCRIPTS_DIR = Path(os.getenv("TRANSCRIPTS_DIR", str(_ROOT / "transcripts")))
 
 
 def _transcript_label(filename: str) -> str:

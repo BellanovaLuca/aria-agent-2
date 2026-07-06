@@ -6,6 +6,7 @@ import type { TranscriptAnalysis, AnalyticsSummary, ToastItem } from '../types'
 
 interface Props {
   addToast: (type: ToastItem['type'], msg: string) => void
+  onOpenTranscript?: (filename: string) => void
 }
 
 const OUTCOME_META: Record<string, { label: string; color: string }> = {
@@ -71,7 +72,7 @@ function Distribution({ title, data, meta }: { title: string; data: Record<strin
   )
 }
 
-export function Analytics({ addToast }: Props) {
+export function Analytics({ addToast, onOpenTranscript }: Props) {
   const [analyses, setAnalyses] = useState<TranscriptAnalysis[]>([])
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -188,7 +189,15 @@ export function Analytics({ addToast }: Props) {
                     <span style={{ marginLeft: 'auto' }}><Stars score={a.quality_score} /></span>
                   </div>
                   <div style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 5 }}>{a.summary}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', fontStyle: 'italic' }}>{a.quality_notes}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', fontStyle: 'italic', marginBottom: onOpenTranscript ? 8 : 0 }}>{a.quality_notes}</div>
+                  {onOpenTranscript && (
+                    <button
+                      onClick={() => onOpenTranscript(a.filename)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}
+                    >
+                      Vedi trascrizione →
+                    </button>
+                  )}
                 </div>
               ))
             )}

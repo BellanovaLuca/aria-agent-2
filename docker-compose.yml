@@ -26,10 +26,13 @@ services:
     environment:
       <<: *svc-env
       USER_DB_PATH: /data/db.json
+      TRANSCRIPTS_DIR: /transcripts
       LIVEKIT_URL: ${LIVEKIT_URL:-}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
-    volumes: ["user_data:/data"]
+    volumes:
+      - user_data:/data
+      - ./transcripts:/transcripts:ro
     ports: ["8001:8001"]
 
   email_service:

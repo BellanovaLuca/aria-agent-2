@@ -20,6 +20,12 @@ const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [userCount, setUserCount] = useState(0)
+  const [callsDeepLink, setCallsDeepLink] = useState<string | null>(null)
+
+  const openTranscript = useCallback((filename: string) => {
+    setCallsDeepLink(filename)
+    setPage('calls')
+  }, [])
   const { toasts, addToast, removeToast } = useToast()
   const [showTweaks, setShowTweaks] = useState(false)
   const [tweaksAnchor, setTweaksAnchor] = useState<DOMRect | null>(null)
@@ -75,13 +81,13 @@ export default function App() {
         }>
           <div key={page} className="animate-page-enter flex-1" style={{ minHeight: 0 }}>
             {page === 'dashboard' && <Dashboard addToast={addToast} />}
-            {page === 'calls'     && <Calls     addToast={addToast} />}
+            {page === 'calls'     && <Calls     addToast={addToast} openFilename={callsDeepLink} onOpened={() => setCallsDeepLink(null)} />}
             {page === 'live'      && <LiveCalls addToast={addToast} />}
             {page === 'admin'     && <Admin     addToast={addToast} onUserCountChange={setUserCount} />}
             {page === 'email'     && <Email     addToast={addToast} />}
             {page === 'knowledge' && <Knowledge addToast={addToast} />}
             {page === 'tickets'   && <Tickets   addToast={addToast} />}
-            {page === 'analytics' && <Analytics addToast={addToast} />}
+            {page === 'analytics' && <Analytics addToast={addToast} onOpenTranscript={openTranscript} />}
           </div>
         </Suspense>
       </main>
