@@ -33,6 +33,26 @@ export interface TranscriptMeta {
   timestamp: string
 }
 
+export interface TicketNote {
+  author: string
+  text: string
+  at: string
+}
+
+export interface Ticket {
+  id: string
+  number: string
+  caller: string | null
+  channel: 'voice' | 'email' | 'chat'
+  category: string
+  subject: string
+  description: string
+  status: 'new' | 'in_progress' | 'resolved' | 'closed'
+  created_at: string
+  updated_at: string
+  notes: TicketNote[]
+}
+
 export interface KnowledgeDoc {
   id: string
   filename: string
@@ -63,7 +83,7 @@ export interface LiveRoom {
   has_operator: boolean
 }
 
-export type Page = 'dashboard' | 'calls' | 'live' | 'admin' | 'email' | 'knowledge'
+export type Page = 'dashboard' | 'calls' | 'live' | 'admin' | 'email' | 'knowledge' | 'tickets'
 
 export interface ToastItem {
   id: string

@@ -272,7 +272,23 @@ Microservizio FastAPI che espone l'assistente "Sofia" come **chat testuale**. Us
 
 **Documentazione interattiva:** http://localhost:8004/docs
 
-### 7. Frontend React (`frontend-react/` — porta 5173)
+### 7. Ticket Service (`ticket_service/` — porta 8005)
+
+Microservizio FastAPI che simula un **ITSM (mock ServiceNow)**. L'agente vi apre un ticket quando non può risolvere una richiesta (fuori dai suoi ambiti, domanda senza risposta in knowledge base, o richiesta esplicita dell'utente); un operatore li gestisce dalla dashboard.
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /tickets` | Apre un nuovo ticket (numero incrementale `INCxxxxxxx`) |
+| `GET /tickets` | Elenca i ticket (filtri `?status=` e `?caller=`) |
+| `GET /tickets/{number}` | Dettaglio di un ticket |
+| `PATCH /tickets/{number}` | Cambia stato e/o aggiunge una nota di lavorazione |
+
+- Persistenza su `tickets.json` (scrittura atomica sotto lock, esclusa dal repo).
+- I tool `open_support_ticket` e `check_ticket_status` (voce e chat, via `shared/operations.py`) aprono e interrogano i ticket con il canale corretto.
+
+**Documentazione interattiva:** http://localhost:8005/docs
+
+### 8. Frontend React (`frontend-react/` — porta 5173)
 
 Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + TypeScript + Tailwind CSS**. Tema GitHub Dark con palette cromatica personalizzabile via tweak panel.
 
@@ -291,6 +307,8 @@ Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + Ty
 **Knowledge** — caricamento documenti (drag & drop di PDF/MD/TXT), lista con conteggio frammenti, eliminazione, e un box "prova una ricerca" che mostra i passaggi che l'agente userebbe per rispondere, con fonte e percentuale di rilevanza.
 
 **Chat** — un widget fluttuante (accanto al pulsante chiamata) per conversare con Sofia in testo: gli stessi strumenti della voce (reset, sblocco, Q&A). La dashboard distingue i canali voce/email/chat nelle metriche e nei grafici.
+
+**Ticket** — coda dei ticket aperti dall'agente: filtro per stato, dettaglio espandibile con descrizione e note, controlli operatore per cambiare stato e aggiungere note di lavorazione.
 
 ---
 
@@ -449,9 +467,10 @@ INTERNAL_API_KEY=your_internal_api_key
 | 2 | Email Service | 8002 |
 | 3 | Knowledge Service | 8003 |
 | 4 | Chat Service | 8004 |
-| 5 | Email Processor | — |
-| 6 | Voice Agent | — |
-| 7 | Frontend React (Vite) | 5175 |
+| 5 | Ticket Service | 8005 |
+| 6 | Email Processor | — |
+| 7 | Voice Agent | — |
+| 8 | Frontend React (Vite) | 5175 |
 
 `Ctrl+C` ferma tutto tramite trap su `EXIT/INT/TERM`.
 
@@ -479,12 +498,15 @@ cd knowledge_service && uvicorn main:app --port 8003 --reload
 cd chat_service && uvicorn main:app --port 8004 --reload
 
 # Terminale 5
+cd ticket_service && uvicorn main:app --port 8005 --reload
+
+# Terminale 6
 python email_processor/processor.py
 
-# Terminale 6 — Voice Agent
+# Terminale 7 — Voice Agent
 python voice_agent/agent.py dev
 
-# Terminale 7 — Frontend
+# Terminale 8 — Frontend
 cd frontend-react && npm run dev
 ```
 
@@ -515,6 +537,9 @@ cd user_service && python -m pytest tests/ -q
 
 # Chat Service — loop di function calling con un client Gemini fake
 cd chat_service && python -m pytest tests/ -q
+
+# Ticket Service — numerazione INC, filtri, PATCH, persistenza
+cd ticket_service && python -m pytest tests/ -q
 ```
 
 ---
@@ -578,6 +603,11 @@ aria-agent/
 │   ├── tests/                 # Test del loop con client Gemini fake
 │   └── requirements.txt
 │
+├── ticket_service/
+│   ├── main.py                # FastAPI: CRUD ticket (mock ServiceNow), JSON
+│   ├── tests/                 # Test numerazione INC, filtri, PATCH, persistenza
+│   └── requirements.txt
+│
 ├── voice_agent/
 │   ├── agent.py               # Agente LiveKit + Gemini Live + trascrizione
 │   ├── tools.py               # Tool functions esposte al LLM
@@ -592,7 +622,7 @@ aria-agent/
 │   │   ├── utils.ts
 │   │   └── types.ts
 │   ├── package.json
-│   └── vite.config.ts         # Proxy: /api→:8001, /email→:8002, /knowledge→:8003, /chat→:8004
+│   └── vite.config.ts         # Proxy: /api→8001, /email→8002, /knowledge→8003, /chat→8004, /tickets→8005
 │
 ├── transcripts/               # Trascrizioni chiamate — generata a runtime, non versionata
 │

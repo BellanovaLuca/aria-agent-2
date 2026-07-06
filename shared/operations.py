@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8001")
 KNOWLEDGE_SERVICE_URL = os.getenv("KNOWLEDGE_SERVICE_URL", "http://localhost:8003")
+TICKET_SERVICE_URL = os.getenv("TICKET_SERVICE_URL", "http://localhost:8005")
 _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 _HTTP_TIMEOUT = 10.0
@@ -123,3 +124,56 @@ async def search_knowledge_base(query: str) -> dict:
         }
     passages = [{"text": h["text"], "source": h["filename"]} for h in data.get("hits", [])]
     return {"found": bool(passages), "passages": passages}
+
+
+async def open_ticket(
+    subject: str, description: str, category: str, caller: str | None, channel: str
+) -> dict:
+    """Apre un ticket di supporto e restituisce il numero da comunicare all'utente."""
+    log.info("open_ticket(subject=%r, channel=%r)", subject, channel)
+    try:
+        async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, headers=_headers()) as client:
+            resp = await client.post(
+                f"{TICKET_SERVICE_URL}/tickets",
+                json={
+                    "subject": subject,
+                    "description": description,
+                    "category": category or "altro",
+                    "caller": caller,
+                    "channel": channel,
+                },
+            )
+            resp.raise_for_status()
+            ticket = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("open_ticket: ticket service non disponibile: %s", exc)
+        return {
+            "success": False,
+            "message": "Non riesco ad aprire un ticket in questo momento. Riprova più tardi.",
+        }
+    return {
+        "success": True,
+        "number": ticket["number"],
+        "message": f"Ticket {ticket['number']} aperto con successo.",
+    }
+
+
+async def get_ticket_status(number: str) -> dict:
+    """Restituisce lo stato di un ticket dato il suo numero (es. INC0001001)."""
+    log.info("get_ticket_status(number=%r)", number)
+    try:
+        async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, headers=_headers()) as client:
+            resp = await client.get(f"{TICKET_SERVICE_URL}/tickets/{number}")
+            if resp.status_code == 404:
+                return {"found": False, "message": f"Nessun ticket trovato con numero {number}."}
+            resp.raise_for_status()
+            ticket = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("get_ticket_status: ticket service non disponibile: %s", exc)
+        return {"found": False, "message": "Il sistema dei ticket non è al momento raggiungibile."}
+    return {
+        "found": True,
+        "number": ticket["number"],
+        "status": ticket["status"],
+        "subject": ticket["subject"],
+    }

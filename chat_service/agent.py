@@ -63,6 +63,12 @@ Puoi aiutare con TRE tipi di richieste, ognuna con il suo strumento:
    - Se non ci sono passaggi, dillo con onestà e proponi il supporto; non
      ripiegare sulla tua conoscenza generale.
 
+4. TICKET DI SUPPORTO — quando non puoi risolvere tu (fuori dai tre ambiti,
+   knowledge base senza risposta, o richiesta dell'utente), proponi di aprire un
+   ticket. Se l'utente accetta, chiama open_support_ticket con oggetto e
+   descrizione chiari, poi comunica il numero. Se l'utente chiede lo stato e ti
+   dà un numero (es. INC0001001), chiama check_ticket_status.
+
 Regole:
 - Non annunciare che stai per usare uno strumento: usalo e basta, poi rispondi.
 - Se la richiesta esula da questi tre ambiti, spiega con gentilezza cosa puoi fare.
@@ -118,6 +124,29 @@ _TOOLS = [
                 ["query"],
             ),
         ),
+        types.FunctionDeclaration(
+            name="open_support_ticket",
+            description=(
+                "Apre un ticket di supporto quando non puoi risolvere tu la "
+                "richiesta (fuori ambito, non in knowledge base, o richiesto "
+                "dall'utente). Chiedi conferma prima di aprirlo."
+            ),
+            parameters=_schema(
+                {
+                    "subject": _str("Oggetto sintetico del problema (una riga)."),
+                    "description": _str("Descrizione dettagliata di cosa serve all'utente."),
+                },
+                ["subject", "description"],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name="check_ticket_status",
+            description="Controlla lo stato di un ticket già aperto dato il suo numero (INCxxxxxxx).",
+            parameters=_schema(
+                {"number": _str("Numero del ticket, formato INCxxxxxxx.")},
+                ["number"],
+            ),
+        ),
     ])
 ]
 
@@ -132,6 +161,12 @@ async def _dispatch(name: str, args: dict) -> dict:
         )
     if name == "search_knowledge_base":
         return await operations.search_knowledge_base(args.get("query", ""))
+    if name == "open_support_ticket":
+        return await operations.open_ticket(
+            args.get("subject", ""), args.get("description", ""), "altro", None, channel="chat"
+        )
+    if name == "check_ticket_status":
+        return await operations.get_ticket_status(args.get("number", ""))
     log.warning("Tool sconosciuto richiesto dal modello: %r", name)
     return {"error": f"Strumento sconosciuto: {name}"}
 

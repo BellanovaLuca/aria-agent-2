@@ -24,6 +24,8 @@ export const apiPost = <T>(url: string, body: unknown) =>
   apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
 export const apiPut = <T>(url: string, body: unknown) =>
   apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })
+export const apiPatch = <T>(url: string, body: unknown) =>
+  apiFetch<T>(url, { method: 'PATCH', body: JSON.stringify(body) })
 export const apiDelete = (url: string) => apiFetch<void>(url, { method: 'DELETE' })
 
 /** Upload multipart: niente Content-Type manuale, lo imposta il browser con il boundary. */

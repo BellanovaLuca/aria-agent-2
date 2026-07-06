@@ -127,6 +127,15 @@ export function IcChat({ size = 15 }: { size?: number }) {
   )
 }
 
+export function IcTicket({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M3 6.5A1.5 1.5 0 014.5 5h11A1.5 1.5 0 0117 6.5V8a1.5 1.5 0 000 3v1.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 12.5V11a1.5 1.5 0 000-3V6.5z"/>
+      <path d="M11 5v10" strokeDasharray="1.5 2"/>
+    </svg>
+  )
+}
+
 export function IcHeadset({ size = 15 }: { size?: number }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>

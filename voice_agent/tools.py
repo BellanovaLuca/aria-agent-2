@@ -81,3 +81,38 @@ async def search_knowledge_base(query: str) -> dict:
         Dizionario con `passages` (lista di {text, source}) e `found` (bool).
     """
     return await operations.search_knowledge_base(query)
+
+
+@llm.function_tool
+async def open_support_ticket(subject: str, description: str) -> dict:
+    """Apre un ticket di supporto quando non puoi risolvere tu la richiesta.
+
+    Da usare se la domanda esula dai tuoi compiti (reset, sblocco, Q&A dalla
+    knowledge base), se la knowledge base non ha la risposta, o se l'utente
+    chiede esplicitamente di aprire un ticket. Chiedi conferma all'utente prima
+    di aprirlo, poi comunicagli il numero restituito.
+
+    Args:
+        subject: Oggetto sintetico del problema (una riga).
+        description: Descrizione dettagliata di cosa serve all'utente.
+
+    Returns:
+        Dizionario con success, number (es. "INC0001001") e message.
+    """
+    return await operations.open_ticket(subject, description, "altro", None, channel="voice")
+
+
+@llm.function_tool
+async def check_ticket_status(number: str) -> dict:
+    """Controlla lo stato di un ticket di supporto già aperto, dato il suo numero.
+
+    Da usare quando l'utente chiede a che punto è la sua richiesta e fornisce un
+    numero di ticket (es. "INC0001001").
+
+    Args:
+        number: Il numero del ticket, nel formato INCxxxxxxx.
+
+    Returns:
+        Dizionario con found, number, status e subject.
+    """
+    return await operations.get_ticket_status(number)

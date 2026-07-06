@@ -29,7 +29,13 @@ from livekit.plugins.google import realtime as google_realtime
 
 # sys.path consente l'import di voice_agent.tools dalla root del progetto
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from voice_agent.tools import reset_user_password, search_knowledge_base, unlock_account
+from voice_agent.tools import (
+    check_ticket_status,
+    open_support_ticket,
+    reset_user_password,
+    search_knowledge_base,
+    unlock_account,
+)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -80,6 +86,13 @@ Puoi aiutare con TRE tipi di richieste, ognuna con il suo strumento:
    - Se il tool non restituisce passaggi, dillo con onestà e proponi il supporto.
      Meglio ammettere di non sapere che dare un'informazione errata.
 
+4. TICKET DI SUPPORTO — quando non puoi risolvere tu (richiesta fuori dai tre
+   ambiti sopra, oppure la knowledge base non ha la risposta, oppure l'utente
+   lo chiede), proponi di aprire un ticket. Se l'utente accetta, chiama IN
+   SILENZIO open_support_ticket con un oggetto e una descrizione chiari, poi
+   comunica il numero del ticket. Se l'utente chiede a che punto è la sua
+   richiesta e ti dà un numero (es. INC0001001), chiama check_ticket_status.
+
 Regole trasversali:
 - NON pronunciare frasi di attesa prima di chiamare un tool ("Verifico", "Un momento"…):
   chiama il tool in silenzio e parla solo dopo aver ricevuto il risultato.
@@ -102,7 +115,13 @@ class ITSupportAgent(Agent):
     def __init__(self) -> None:
         super().__init__(
             instructions=INSTRUCTIONS,
-            tools=[reset_user_password, unlock_account, search_knowledge_base],
+            tools=[
+                reset_user_password,
+                unlock_account,
+                search_knowledge_base,
+                open_support_ticket,
+                check_ticket_status,
+            ],
         )
 
     async def on_enter(self) -> None:

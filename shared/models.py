@@ -73,6 +73,47 @@ class ResetHistoryEntry(BaseModel):
     requested_at: datetime
 
 
+TicketStatus = Literal["new", "in_progress", "resolved", "closed"]
+
+
+class TicketNote(BaseModel):
+    """Nota di lavorazione aggiunta a un ticket."""
+    author: str
+    text: str
+    at: datetime
+
+
+class TicketCreate(BaseModel):
+    """Payload per aprire un nuovo ticket di supporto."""
+    caller: Optional[str] = None       # username/email del richiedente, se noto
+    channel: Channel
+    category: str = "altro"
+    subject: str
+    description: str
+
+
+class TicketUpdate(BaseModel):
+    """Aggiornamento di un ticket: cambio stato e/o aggiunta di una nota."""
+    status: Optional[TicketStatus] = None
+    note: Optional[str] = None
+    author: Optional[str] = None        # autore della nota (default "operatore")
+
+
+class Ticket(BaseModel):
+    """Ticket di supporto (mock ServiceNow), persistito su tickets.json."""
+    id: str
+    number: str                          # es. "INC0001001"
+    caller: Optional[str] = None
+    channel: Channel
+    category: str
+    subject: str
+    description: str
+    status: TicketStatus
+    created_at: datetime
+    updated_at: datetime
+    notes: list[TicketNote] = []
+
+
 class Email(BaseModel):
     """Email completa con metadati (id, timestamp, stato di processazione)."""
     id: str
