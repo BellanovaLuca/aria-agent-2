@@ -1,25 +1,35 @@
 # Agente AI per Sblocco Utenze — Documentazione Tecnica
 
-> Documentazione di progetto per l'evoluzione della PoC (LiveKit + Gemini Live)
-> verso una **possibile soluzione di produzione** su ambiente **AWS** con
-> **Amazon Nova Sonic** e possibili integrazioni con **ServiceNow** e
-> **Active Directory**.
+> Documentazione di progetto per l'evoluzione verso una **possibile soluzione di
+> produzione** su ambiente **AWS** con **Amazon Nova Sonic** e integrazioni con
+> **ServiceNow** e **Active Directory**.
+>
+> **Nota** — la PoC in questo repository è nel frattempo cresciuta in una
+> piattaforma multicanale di supporto IT (voce, email, chat) che già dimostra
+> reset password, **sblocco utenze**, Q&A su knowledge base (RAG), **ticketing**
+> (mock ServiceNow), handoff a operatore e analisi AI post-chiamata — con
+> Google Gemini e servizi mock. Questa cartella descrive come portare quel
+> nucleo in **produzione su AWS**, restringendo lo scope allo sblocco (più
+> basso rischio) e sostituendo i provider mock con quelli enterprise. Vedi il
+> [ROADMAP](../ROADMAP.md) del repo per lo stato della PoC.
 
-## Scope
+## Scope della soluzione di produzione
 
-L'agente gestisce **esclusivamente lo sblocco di utenze di dominio** (account
-Active Directory in stato `locked-out`), tramite due canali:
+In produzione l'agente gestisce **esclusivamente lo sblocco di utenze di
+dominio** (account Active Directory in stato `locked-out`), tramite due canali:
 
 | Canale | Ingresso | Motore conversazionale |
 |---|---|---|
 | **Voce** | Chiamata telefonica deviata verso numero dedicato (sincrono) | Amazon Nova Sonic 2 (speech-to-speech, it-IT) su Amazon Bedrock |
 | **Testo** | Email → ticket ServiceNow automatico, esaminato dal Text Agent (asincrono) | Amazon Bedrock (Converse API) con lo stesso layer di tool |
 
-A differenza della PoC (reset password con servizio utenti mock e canale
-email diretto), la soluzione di produzione:
+Rispetto alla PoC, la soluzione di produzione restringe deliberatamente lo scope
+e cambia i mattoni infrastrutturali:
 
-- **non genera né gestisce password** — esegue solo l'operazione di unlock;
-- usa **ServiceNow** come sistema di record (ticket ITSM per ogni richiesta);
+- **non genera né gestisce password** — esegue solo l'operazione di unlock
+  (rischio più basso: nessuna credenziale trattata);
+- usa **ServiceNow** come sistema di record (il mock `ticket_service` della PoC
+  ne anticipa il pattern) — ticket ITSM per ogni richiesta;
 - usa **Active Directory** come sistema di identità (verifica stato + unlock);
 - gira interamente in un **ambiente AWS dedicato**.
 
@@ -31,8 +41,10 @@ email diretto), la soluzione di produzione:
 | [02 — Workflow end-to-end](02-workflow.md) | Flussi conversazionali e di sistema: happy path, casi di errore, escalation |
 | [03 — Integrazione ServiceNow e Active Directory](03-integrazione-servicenow-ad.md) | Pattern di integrazione, API, autenticazione, opzioni a confronto |
 | [04 — Sicurezza e compliance](04-sicurezza-compliance.md) | Trust boundary, minimizzazione dati, cifratura, audit, GDPR, anti-abuso |
-| [TAV.01 — Tavola di architettura](architettura.html) | Diagramma grafico vettoriale (aprire nel browser; stampabile/esportabile in PDF-PNG) |
-| [architettura.drawio](architettura.drawio) | Sorgente editabile del diagramma per [draw.io / diagrams.net](https://app.diagrams.net) |
+
+I diagrammi di architettura sono in forma testuale (ASCII) all'interno di
+[01 — Architettura](01-architettura.md), così restano versionabili e
+sempre allineati al testo.
 
 ## Dati trattati
 

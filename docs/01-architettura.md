@@ -45,8 +45,10 @@ testo, con integrazione ServiceNow e Active Directory.
 Principio chiave: **i due canali condividono lo stesso Unlock Orchestrator**.
 Il canale è solo il punto di ingresso; tutta la logica di business
 (identificazione, verifica stato, sblocco, ticketing, audit) vive in un unico
-servizio. È lo stesso pattern della PoC (voice agent ed email processor che
-condividono lo user service), portato a livello enterprise.
+servizio. È lo stesso pattern già adottato nella PoC, dove voce, chat ed email
+condividono la logica in `shared/operations.py` (reset, sblocco, ricerca KB,
+ticket) e i servizi mock (`user_service`, `ticket_service`): qui viene portato
+a livello enterprise.
 
 I due canali differiscono per **natura e punto di ingresso**:
 
@@ -152,27 +154,38 @@ Dettaglio completo in [03 — Integrazione ServiceNow e AD](03-integrazione-serv
 
 ## 3. Gap analysis: PoC → produzione
 
-| Aspetto | PoC (questo repo) | Produzione |
+La PoC è nel frattempo cresciuta e implementa già molte capacità che la
+produzione riprende: la differenza principale non è più *cosa* fa, ma i
+**provider** e l'**infrastruttura** (mock/cloud gestito → AWS enterprise), oltre
+al **restringimento di scope** allo sblocco.
+
+| Aspetto | PoC (questo repo, oggi) | Produzione |
 |---|---|---|
-| Caso d'uso | Reset password (genera password temporanea) | **Solo sblocco utenze** — nessuna password trattata |
+| Caso d'uso | Reset password, **sblocco utenze**, Q&A su KB (RAG), **ticketing** | **Solo sblocco utenze** — nessuna password trattata |
+| Canali | Voce (telefono/WebRTC) + email + **chat testuale** | Voce (telefono) + testo (email → ticket ServiceNow) |
 | Motore voice | Google Gemini Live (`gemini-2.5-flash-native-audio`) | Amazon Nova Sonic 2 su Bedrock (`livekit-plugins-aws[realtime]`) |
+| Motore chat/testo | Gemini (`gemini-2.5-flash`, function calling) | Amazon Bedrock Converse API (Nova/Claude) |
 | Media server | LiveKit Cloud | LiveKit self-hosted in VPC (EKS/ECS) |
 | PSTN gateway | Twilio + TwiML Bin | SIP trunk carrier / Chime SDK Voice Connector |
-| Canali | Voce + email + web call | Voce (telefono) + testo (email → ticket ServiceNow) |
 | Sistema utenti | Mock FastAPI + `db.json` | Active Directory (via ServiceNow AD Spoke) |
-| Ticketing | Assente (history su JSON) | ServiceNow (sistema di record) |
-| Hosting servizi | Processi locali (`run_all.sh`) | ECS Fargate multi-AZ, IaC (Terraform/CDK) |
-| Segreti | `.env` | AWS Secrets Manager + IAM |
+| Ticketing | **Mock `ticket_service`** (numeri INC, stato + note) | ServiceNow (sistema di record) |
+| Verifica identità | Nome+cognome + anti-abuso (soglia sblocchi/24h configurabile) | Idem, verificato contro AD; livello configurabile |
+| Handoff a operatore | Operatore entra nella stessa room WebRTC | Trasferimento SIP (REFER) verso il centralino |
+| Q&A / knowledge base | RAG con Qdrant + embedding Gemini | Bedrock Knowledge Bases (o Qdrant gestito) |
+| Analisi qualità | `analytics_service` (Gemini structured output) | CloudWatch + QA sui ticket ServiceNow |
+| Hosting servizi | Processi locali (`scripts/run_all.sh`) | ECS Fargate multi-AZ, IaC (Terraform/CDK) |
+| Segreti | `.env` + API key interna tra i servizi | AWS Secrets Manager + IAM |
 | Trascrizioni | File `.txt` locali | S3 cifrato KMS, retention policy |
-| Osservabilità | Log su `/tmp/run_all.log` | CloudWatch Logs/Metrics/Alarms, X-Ray, dashboard |
-| Autenticazione utente | Nessuna (fornisce solo username) | UserID + verifica nome/cognome + CLI logging (vedi doc 04) |
+| Osservabilità | Log strutturati su stdout | CloudWatch Logs/Metrics/Alarms, X-Ray, dashboard |
 
 **Cosa si riusa della PoC:** il framework LiveKit Agents e la struttura
-dell'agente (`AgentSession`, eventi di trascrizione, `@llm.function_tool`),
-il pattern "agente sottile + servizio di orchestrazione", il prompt design
-(persona, regola "tool call silenziosa" che ha risolto i problemi di
-interruzione osservati nei transcript), la dashboard React come base per il
-monitoraggio.
+dell'agente (`AgentSession`, eventi di trascrizione, `@llm.function_tool`), il
+pattern "agente sottile + logica condivisa" (`shared/operations.py`, riusata da
+voce e chat), il prompt design (persona, regola "tool call silenziosa" che ha
+risolto i problemi di interruzione osservati nei transcript, regola
+anti-allucinazione sulla knowledge base), il layer di ticketing mock come
+anticipazione dell'integrazione ServiceNow, e la dashboard React come base per
+il monitoraggio.
 
 ---
 

@@ -6,6 +6,8 @@ L'assistente "Sofia" gestisce tre tipi di richieste: **reset password**, **sbloc
 
 Stack: [LiveKit Agents](https://github.com/livekit/agents) + **Google Gemini Live** (LLM + STT + TTS nativo audio) + **Qdrant** (vector store per la RAG) + embedding **Gemini** + **React** dashboard di monitoraggio.
 
+Per lo stato del progetto e le fasi di sviluppo con le relative implementazioni, vedi il [**ROADMAP**](ROADMAP.md).
+
 > **Nota** — la cartella [`docs/`](docs/README.md) non descrive questa PoC:
 > contiene l'architettura e la documentazione tecnica di una **possibile
 > soluzione di produzione su ambiente AWS** (Amazon Nova Sonic, sblocco
