@@ -3,7 +3,7 @@ import { MetricCard } from '../components/MetricCard'
 import { StatusBadge } from '../components/StatusBadge'
 import { ScrollToTop } from '../components/ScrollToTop'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { IcRefresh, IcTrash, IcPhone, IcEmailIcon, IcCheckCircle } from '../components/icons'
+import { IcRefresh, IcTrash, IcPhone, IcEmailIcon, IcCheckCircle, IcChat } from '../components/icons'
 import { apiGet, apiDelete } from '../hooks/useApi'
 import { fmtTs } from '../utils'
 import type { ResetHistoryEntry, ToastItem } from '../types'
@@ -12,21 +12,28 @@ import type { ResetHistoryEntry, ToastItem } from '../types'
 const IC_TOTAL = <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M2 3a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm9 0a1 1 0 011-1h5a1 1 0 011 1v2a1 1 0 01-1 1h-5a1 1 0 01-1-1V3zm0 6a1 1 0 011-1h5a1 1 0 011 1v8a1 1 0 01-1 1h-5a1 1 0 01-1-1V9zM2 13a1 1 0 011-1h5a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1v-4z"/></svg>
 const IC_PHONE = <IcPhone size={16} />
 const IC_EMAIL = <IcEmailIcon size={16} />
+const IC_CHAT  = <IcChat size={16} />
 const IC_OK    = <IcCheckCircle size={14} />
 const IC_FAIL  = <span style={{ fontSize: 13, fontWeight: 700 }}>✕</span>
 
 /* ── Custom SVG Charts ───────────────────────────────────────────────────── */
 
-function DonutChart({ phone, email, total }: { phone: number; email: number; total: number }) {
+interface DonutSegment { label: string; value: number; opacity: number }
+
+function DonutChart({ segments, total }: { segments: DonutSegment[]; total: number }) {
   const r = 72, cx = 96, cy = 96, stroke = 20
   const circ = 2 * Math.PI * r
-  const phoneRatio = total > 0 ? phone / total : 0
-  const emailRatio = total > 0 ? email / total : 0
   const gap = 4
-  const phoneDash = Math.max(0, circ * phoneRatio - gap)
-  const emailDash = Math.max(0, circ * emailRatio - gap)
-  const phoneOffset = -circ * 0.25
-  const emailOffset = -(circ * 0.25) - phoneDash - gap
+
+  // Archi calcolati in sequenza attorno al cerchio, partendo dall'alto.
+  let cursor = -circ * 0.25
+  const arcs = segments.map(seg => {
+    const ratio = total > 0 ? seg.value / total : 0
+    const dash = Math.max(0, circ * ratio - gap)
+    const offset = cursor
+    cursor = cursor - dash - gap
+    return { ...seg, dash, offset }
+  })
 
   const svgRef = useRef<SVGSVGElement>(null)
   const dragState = useRef<{ startAngle: number; baseRotation: number } | null>(null)
@@ -67,7 +74,7 @@ function DonutChart({ phone, email, total }: { phone: number; email: number; tot
   }
 
   return (
-    <div role="img" aria-label={`Distribuzione canali: ${phone} telefono, ${email} email, ${total} totali`}
+    <div role="img" aria-label={`Distribuzione canali: ${segments.map(s => `${s.value} ${s.label}`).join(', ')}, ${total} totali`}
       style={{ display: 'flex', alignItems: 'center', gap: 40, width: '100%', justifyContent: 'center' }}>
       <svg ref={svgRef} width="192" height="192" viewBox="0 0 192 192"
         style={{ flexShrink: 0, cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none' }}
@@ -80,27 +87,20 @@ function DonutChart({ phone, email, total }: { phone: number; email: number; tot
           transformBox: 'view-box' as const,
           transition: dragging ? 'none' : 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}>
-          {phoneDash > 0 && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent)" strokeWidth={stroke}
-              strokeDasharray={`${phoneDash} ${circ}`} strokeDashoffset={phoneOffset} strokeLinecap="round" />
-          )}
-          {emailDash > 0 && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent)" strokeWidth={stroke}
-              strokeDasharray={`${emailDash} ${circ}`} strokeDashoffset={emailOffset} strokeLinecap="round" strokeOpacity={0.4} />
-          )}
+          {arcs.map(arc => arc.dash > 0 && (
+            <circle key={arc.label} cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent)" strokeWidth={stroke}
+              strokeDasharray={`${arc.dash} ${circ}`} strokeDashoffset={arc.offset} strokeLinecap="round" strokeOpacity={arc.opacity} />
+          ))}
         </g>
         <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text)" fontSize="26" fontWeight="700" fontFamily="Geist, system-ui">{total}</text>
         <text x={cx} y={cy + 14} textAnchor="middle" fill="var(--text2)" fontSize="12" fontFamily="Geist, system-ui">totale</text>
       </svg>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {[
-          { label: 'Telefono', val: phone, color: 'var(--accent)', opacity: 1 },
-          { label: 'Email',    val: email, color: 'var(--accent)', opacity: 0.4 },
-        ].map(item => (
+        {segments.map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, opacity: item.opacity, boxShadow: `0 0 8px ${item.color}`, flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', opacity: item.opacity, boxShadow: '0 0 8px var(--accent)', flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: 'var(--text2)' }}>{item.label}</span>
-            <span className="tabular" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{item.val}</span>
+            <span className="tabular" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{item.value}</span>
           </div>
         ))}
       </div>
@@ -108,14 +108,16 @@ function DonutChart({ phone, email, total }: { phone: number; email: number; tot
   )
 }
 
+type ChannelKey = 'voice' | 'email' | 'chat'
+
 function BarChartSVG({
   data,
   onFilterClick,
   activeChannel,
 }: {
-  data: Array<{ label: string; ok: number; fail: number }>
-  onFilterClick?: (channel: 'voice' | 'email') => void
-  activeChannel?: 'voice' | 'email' | null
+  data: Array<{ label: string; channel: ChannelKey; ok: number; fail: number }>
+  onFilterClick?: (channel: ChannelKey) => void
+  activeChannel?: ChannelKey | null
 }) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
@@ -124,8 +126,6 @@ function BarChartSVG({
   const max = Math.max(...data.map(d => Math.max(d.ok, d.fail)), 1)
   const h = 120, barW = 38, gap = 16, groupGap = 60
   const totalW = data.length * (2 * barW + gap + groupGap)
-
-  const channelOf = (label: string): 'voice' | 'email' => label === 'Telefono' ? 'voice' : 'email'
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return
@@ -146,7 +146,7 @@ function BarChartSVG({
           const okH = max > 0 ? d.ok / max * h : 0
           const failH = max > 0 ? d.fail / max * h : 0
           const isHov = hovered === d.label
-          const channel = channelOf(d.label)
+          const channel = d.channel
           const isActive = activeChannel === channel
           return (
             <g key={d.label}
@@ -446,7 +446,7 @@ export function Dashboard({ addToast }: Props) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [histPage, setHistPage] = useState(0)
-  const [activeFilter, setActiveFilter] = useState<'voice' | 'email' | 'success' | 'fail' | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'voice' | 'email' | 'chat' | 'success' | 'fail' | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval>>()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -488,24 +488,27 @@ export function Dashboard({ addToast }: Props) {
   const setFilterNull    = useCallback(() => setActiveFilter(null), [])
   const toggleFilterVoice   = useCallback(() => setActiveFilter(f => f === 'voice'   ? null : 'voice'), [])
   const toggleFilterEmail   = useCallback(() => setActiveFilter(f => f === 'email'   ? null : 'email'), [])
+  const toggleFilterChat    = useCallback(() => setActiveFilter(f => f === 'chat'    ? null : 'chat'), [])
   const toggleFilterSuccess = useCallback(() => setActiveFilter(f => f === 'success' ? null : 'success'), [])
   const toggleFilterFail    = useCallback(() => setActiveFilter(f => f === 'fail'    ? null : 'fail'), [])
 
-  const { total, voice, email, success, fail, barData, reversedHistory } = useMemo(() => {
-    let voice = 0, email = 0, success = 0
-    let voiceOk = 0, voiceFail = 0, emailOk = 0, emailFail = 0
+  const { total, voice, email, chat, success, fail, barData, reversedHistory } = useMemo(() => {
+    let voice = 0, email = 0, chat = 0, success = 0
+    let voiceOk = 0, voiceFail = 0, emailOk = 0, emailFail = 0, chatOk = 0, chatFail = 0
     for (const e of history) {
-      if (e.channel === 'voice') { voice++; e.success ? voiceOk++ : voiceFail++ }
-      else                       { email++; e.success ? emailOk++ : emailFail++ }
+      if (e.channel === 'chat')       { chat++;  e.success ? chatOk++  : chatFail++ }
+      else if (e.channel === 'email') { email++; e.success ? emailOk++ : emailFail++ }
+      else                            { voice++; e.success ? voiceOk++ : voiceFail++ }
       if (e.success) success++
     }
     return {
       total: history.length,
-      voice, email, success,
+      voice, email, chat, success,
       fail: history.length - success,
       barData: [
-        { label: 'Telefono', ok: voiceOk, fail: voiceFail },
-        { label: 'Email',    ok: emailOk, fail: emailFail },
+        { label: 'Telefono', channel: 'voice' as const, ok: voiceOk, fail: voiceFail },
+        { label: 'Email',    channel: 'email' as const, ok: emailOk, fail: emailFail },
+        { label: 'Chat',     channel: 'chat'  as const, ok: chatOk,  fail: chatFail },
       ],
       reversedHistory: history.toReversed(),
     }
@@ -518,6 +521,7 @@ export function Dashboard({ addToast }: Props) {
     return reversedHistory.filter(e => {
       if (activeFilter === 'voice')   return e.channel === 'voice'
       if (activeFilter === 'email')   return e.channel === 'email'
+      if (activeFilter === 'chat')    return e.channel === 'chat'
       if (activeFilter === 'success') return e.success
       if (activeFilter === 'fail')    return !e.success
       return true
@@ -601,6 +605,13 @@ export function Dashboard({ addToast }: Props) {
             active={activeFilter === 'email'}
             icon={IC_EMAIL}
           />
+          <MetricCard label="Via Chat" value={chat}
+            sub={total > 0 ? `${Math.round(chat / total * 100)}% del totale` : '—'}
+            color="var(--accent)" glow="var(--accent)"
+            onClick={toggleFilterChat}
+            active={activeFilter === 'chat'}
+            icon={IC_CHAT}
+          />
           <MetricCard label="Successi" value={success}
             sub={total > 0 ? `${Math.round(success / total * 100)}% success rate` : '—'}
             color="var(--success)" glow="var(--success)"
@@ -626,7 +637,11 @@ export function Dashboard({ addToast }: Props) {
               Distribuzione per canale
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <DonutChart phone={voice} email={email} total={total} />
+              <DonutChart total={total} segments={[
+                { label: 'Telefono', value: voice, opacity: 1 },
+                { label: 'Email',    value: email, opacity: 0.65 },
+                { label: 'Chat',     value: chat,  opacity: 0.35 },
+              ]} />
             </div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px' }}>
@@ -637,7 +652,7 @@ export function Dashboard({ addToast }: Props) {
               <BarChartSVG
                 data={barData}
                 onFilterClick={(ch) => setActiveFilter(f => f === ch ? null : ch)}
-                activeChannel={activeFilter === 'voice' ? 'voice' : activeFilter === 'email' ? 'email' : null}
+                activeChannel={activeFilter === 'voice' || activeFilter === 'email' || activeFilter === 'chat' ? activeFilter : null}
               />
             </div>
           </div>
@@ -658,7 +673,7 @@ export function Dashboard({ addToast }: Props) {
                 background: 'var(--accent-dim)', border: '1px solid var(--accent)',
                 color: 'var(--accent)', fontSize: 11, fontWeight: 600, cursor: 'pointer', lineHeight: 1.6,
               }}>
-                {{ voice: 'Telefono', email: 'Email', success: 'Successi', fail: 'Falliti' }[activeFilter]}
+                {{ voice: 'Telefono', email: 'Email', chat: 'Chat', success: 'Successi', fail: 'Falliti' }[activeFilter]}
                 <span style={{ fontSize: 13, lineHeight: 1 }}>×</span>
               </button>
             )}
@@ -695,8 +710,8 @@ export function Dashboard({ addToast }: Props) {
                         {fmtTs(e.requested_at)}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span title={e.channel === 'voice' ? 'Telefono' : 'Email'} style={{ display: 'inline-flex', color: 'var(--text2)' }}>
-                          {e.channel === 'voice' ? <IcPhone size={15} /> : <IcEmailIcon size={15} />}
+                        <span title={e.channel === 'voice' ? 'Telefono' : e.channel === 'chat' ? 'Chat' : 'Email'} style={{ display: 'inline-flex', color: 'var(--text2)' }}>
+                          {e.channel === 'voice' ? <IcPhone size={15} /> : e.channel === 'chat' ? <IcChat size={15} /> : <IcEmailIcon size={15} />}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>

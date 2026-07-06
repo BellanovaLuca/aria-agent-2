@@ -2,7 +2,7 @@
 
 Piattaforma open-source per costruire **agenti AI multicanale** con voce, email e interfaccia web. Il progetto include un'implementazione di riferimento ma l'architettura è progettata per essere adattata a qualsiasi caso d'uso conversazionale.
 
-L'assistente vocale ("Sofia") gestisce tre tipi di richieste: **reset password**, **sblocco utenza** (con verifica d'identità) e **domande IT** — a queste ultime risponde attingendo a una **knowledge base** (RAG) costruita sui documenti aziendali caricati dalla dashboard.
+L'assistente "Sofia" gestisce tre tipi di richieste: **reset password**, **sblocco utenza** (con verifica d'identità) e **domande IT** — a queste ultime risponde attingendo a una **knowledge base** (RAG) costruita sui documenti aziendali caricati dalla dashboard. È raggiungibile su **tre canali** che condividono gli stessi strumenti e la stessa logica: **voce** (telefono/WebRTC via Gemini Live), **email** (processing asincrono) e **chat testuale** (widget nella dashboard, via Gemini con function calling).
 
 Stack: [LiveKit Agents](https://github.com/livekit/agents) + **Google Gemini Live** (LLM + STT + TTS nativo audio) + **Qdrant** (vector store per la RAG) + embedding **Gemini** + **React** dashboard di monitoraggio.
 
@@ -255,7 +255,22 @@ Il tool `search_knowledge_base` del voice agent interroga questo servizio; il pr
 
 **Documentazione interattiva:** http://localhost:8003/docs
 
-### 6. Frontend React (`frontend-react/` — porta 5173)
+### 6. Chat Service (`chat_service/` — porta 8004)
+
+Microservizio FastAPI che espone l'assistente "Sofia" come **chat testuale**. Usa **Gemini** (`gemini-2.5-flash`) con **function calling** e gli stessi tre strumenti del canale vocale, condivisi tramite `shared/operations.py` — reset, sblocco e Q&A si comportano in modo identico su voce e chat.
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /message` | Invia un messaggio utente, riceve la risposta dell'assistente |
+| `DELETE /sessions/{id}` | Dimentica una conversazione |
+
+- Il loop di **function calling** è gestito lato server: il modello richiede uno strumento, il servizio lo esegue (via le operazioni condivise, con `channel="chat"`), gli restituisce il risultato e ripete finché produce una risposta testuale.
+- Le **sessioni** sono in memoria (si azzerano al riavvio) con un cap per non crescere senza limiti — adeguato al PoC; in produzione andrebbero in una cache condivisa.
+- La password temporanea non entra mai nel contesto del modello: come per la voce, viene recapitata via email.
+
+**Documentazione interattiva:** http://localhost:8004/docs
+
+### 7. Frontend React (`frontend-react/` — porta 5173)
 
 Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + TypeScript + Tailwind CSS**. Tema GitHub Dark con palette cromatica personalizzabile via tweak panel.
 
@@ -268,6 +283,8 @@ Dashboard di monitoraggio e amministrazione costruita con **React 18 + Vite + Ty
 **Admin** — gestione utenti (CRUD + ricerca per nome/username), simulazione richieste email, cronologia per utente.
 
 **Knowledge** — caricamento documenti (drag & drop di PDF/MD/TXT), lista con conteggio frammenti, eliminazione, e un box "prova una ricerca" che mostra i passaggi che l'agente userebbe per rispondere, con fonte e percentuale di rilevanza.
+
+**Chat** — un widget fluttuante (accanto al pulsante chiamata) per conversare con Sofia in testo: gli stessi strumenti della voce (reset, sblocco, Q&A). La dashboard distingue i canali voce/email/chat nelle metriche e nei grafici.
 
 ---
 
@@ -341,6 +358,7 @@ pip install -r user_service/requirements.txt
 pip install -r email_service/requirements.txt
 pip install -r email_processor/requirements.txt
 pip install -r knowledge_service/requirements.txt
+pip install -r chat_service/requirements.txt
 pip install -r voice_agent/requirements.txt
 ```
 
@@ -424,9 +442,10 @@ INTERNAL_API_KEY=your_internal_api_key
 | 1 | User Service | 8001 |
 | 2 | Email Service | 8002 |
 | 3 | Knowledge Service | 8003 |
-| 4 | Email Processor | — |
-| 5 | Voice Agent | — |
-| 6 | Frontend React (Vite) | 5175 |
+| 4 | Chat Service | 8004 |
+| 5 | Email Processor | — |
+| 6 | Voice Agent | — |
+| 7 | Frontend React (Vite) | 5175 |
 
 `Ctrl+C` ferma tutto tramite trap su `EXIT/INT/TERM`.
 
@@ -451,12 +470,15 @@ cd email_service && uvicorn main:app --port 8002 --reload
 cd knowledge_service && uvicorn main:app --port 8003 --reload
 
 # Terminale 4
+cd chat_service && uvicorn main:app --port 8004 --reload
+
+# Terminale 5
 python email_processor/processor.py
 
-# Terminale 5 — Voice Agent
+# Terminale 6 — Voice Agent
 python voice_agent/agent.py dev
 
-# Terminale 6 — Frontend
+# Terminale 7 — Frontend
 cd frontend-react && npm run dev
 ```
 
@@ -484,6 +506,9 @@ cd knowledge_service && python -m pytest tests/ -q
 
 # User Service — sblocco utenza (verifica identità, anti-abuso, stati)
 cd user_service && python -m pytest tests/ -q
+
+# Chat Service — loop di function calling con un client Gemini fake
+cd chat_service && python -m pytest tests/ -q
 ```
 
 ---
@@ -518,6 +543,7 @@ aria-agent/
 ├── shared/
 │   ├── __init__.py
 │   ├── auth.py                # Dependency X-Internal-Api-Key condivisa
+│   ├── operations.py          # Reset/sblocco/ricerca — logica condivisa voce+chat
 │   └── models.py              # Modelli Pydantic condivisi
 │
 ├── user_service/
@@ -540,6 +566,12 @@ aria-agent/
 │   ├── tests/                 # Test unitari (chunker, store con embedding fake)
 │   └── requirements.txt
 │
+├── chat_service/
+│   ├── main.py                # FastAPI: /message (chat), sessioni in-memory
+│   ├── agent.py               # Loop function-calling Gemini + prompt chat
+│   ├── tests/                 # Test del loop con client Gemini fake
+│   └── requirements.txt
+│
 ├── voice_agent/
 │   ├── agent.py               # Agente LiveKit + Gemini Live + trascrizione
 │   ├── tools.py               # Tool functions esposte al LLM
@@ -554,7 +586,7 @@ aria-agent/
 │   │   ├── utils.ts
 │   │   └── types.ts
 │   ├── package.json
-│   └── vite.config.ts         # Proxy: /api→:8001, /email→:8002, /knowledge→:8003
+│   └── vite.config.ts         # Proxy: /api→:8001, /email→:8002, /knowledge→:8003, /chat→:8004
 │
 ├── transcripts/               # Trascrizioni chiamate — generata a runtime, non versionata
 │
@@ -574,7 +606,7 @@ aria-agent/
 | Nuovi documenti nella knowledge base | Caricali dalla pagina Knowledge della dashboard (o `POST /documents`) — vengono indicizzati e resi disponibili all'agente |
 | Vector store in produzione | Avvia un server Qdrant e imposta `QDRANT_URL` — nessuna modifica al codice |
 | Email reale (IMAP/SMTP) | Sostituisci `email_processor/processor.py` mantenendo l'interfaccia verso User Service |
-| Nuovo canale (WhatsApp, Telegram, chat web) | Nuovo modulo indipendente che chiama gli endpoint User Service |
+| Nuovo canale (WhatsApp, Telegram, ...) | Nuovo modulo che riusa `shared/operations.py` (come fanno voce e chat) con il proprio `channel` |
 | Database reale (PostgreSQL, SQLite) | Sostituisci la persistenza JSON in `user_service/main.py` |
 | Lingua aggiuntiva | Modifica `language` in `AgentSession` e `INSTRUCTIONS` nell'agente |
 | Deploy containerizzato | Ogni processo è indipendente e containerizzabile con Docker |

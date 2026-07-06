@@ -4,6 +4,7 @@ import { ToastContainer } from './components/Toast'
 import { TweaksPanel, applyAccent } from './components/TweaksPanel'
 import type { TweaksState } from './components/TweaksPanel'
 import { CallPanel } from './components/CallPanel'
+import { ChatPanel } from './components/ChatPanel'
 import { useToast } from './hooks/useToast'
 import type { Page } from './types'
 
@@ -80,6 +81,7 @@ export default function App() {
       </main>
 
       <CallPanel />
+      <ChatPanel />
 
       {showTweaks && tweaksAnchor && (
         <TweaksPanel

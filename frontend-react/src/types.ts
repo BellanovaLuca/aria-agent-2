@@ -10,7 +10,7 @@ export interface User {
 export interface ResetHistoryEntry {
   id?: string
   username: string
-  channel: 'voice' | 'email'
+  channel: 'voice' | 'email' | 'chat'
   operation?: 'reset' | 'unlock'
   success: boolean
   message: string

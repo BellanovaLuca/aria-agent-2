@@ -118,6 +118,23 @@ export function IcUpload({ size = 15 }: { size?: number }) {
   )
 }
 
+export function IcChat({ size = 15 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M4 4h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0116 14H8l-4 3v-3H4a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 014 4z"/>
+      <path d="M7 8.5h6M7 11h4"/>
+    </svg>
+  )
+}
+
+export function IcSend({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M17 3L9 11M17 3l-5 14-3-6-6-3 14-5z"/>
+    </svg>
+  )
+}
+
 export function IcUnlock({ size = 15 }: { size?: number }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
