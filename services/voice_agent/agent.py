@@ -175,6 +175,17 @@ async def entrypoint(ctx: JobContext) -> None:
             # Disabilita il "thinking": riduce il ritardo tra fine frase utente e
             # risposta (e velocizza il saluto iniziale).
             thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            # Fine turno più reattivo: di default Gemini attende una pausa lunga
+            # prima di considerare chiuso il turno dell'utente, e la risposta
+            # parte con un ritardo percepibile. Sensibilità alta + 500ms di
+            # silenzio accorciano l'attesa; sotto ~400ms si rischia di
+            # interrompere chi fa pause naturali mentre parla.
+            realtime_input_config=genai_types.RealtimeInputConfig(
+                automatic_activity_detection=genai_types.AutomaticActivityDetection(
+                    end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_HIGH,
+                    silence_duration_ms=500,
+                ),
+            ),
         ),
     )
 
