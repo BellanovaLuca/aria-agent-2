@@ -177,13 +177,15 @@ async def entrypoint(ctx: JobContext) -> None:
             thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
             # Fine turno più reattivo: di default Gemini attende una pausa lunga
             # prima di considerare chiuso il turno dell'utente, e la risposta
-            # parte con un ritardo percepibile. Sensibilità alta + 500ms di
-            # silenzio accorciano l'attesa; sotto ~400ms si rischia di
-            # interrompere chi fa pause naturali mentre parla.
+            # parte con un ritardo percepibile. Sensibilità alta + 700ms di
+            # silenzio accorciano l'attesa senza troncare chi parla: a 500ms una
+            # pausa di riflessione a metà frase chiudeva il turno e produceva
+            # una doppia risposta (prima metà + barge-in sulla seconda);
+            # le pause naturali "di pensiero" durano tipicamente 600-900ms.
             realtime_input_config=genai_types.RealtimeInputConfig(
                 automatic_activity_detection=genai_types.AutomaticActivityDetection(
                     end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_HIGH,
-                    silence_duration_ms=500,
+                    silence_duration_ms=700,
                 ),
             ),
         ),
