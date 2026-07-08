@@ -40,12 +40,14 @@ services:
       - user_data:/data
       - ./transcripts:/transcripts:ro
     ports: ["8001:8001"]
+    restart: unless-stopped
 
   email_service:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: email_service } }
     command: python -m uvicorn main:app --host 0.0.0.0 --port 8002
     environment: *svc-env
     ports: ["8002:8002"]
+    restart: unless-stopped
 
   knowledge_service:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: knowledge_service } }
@@ -55,6 +57,7 @@ services:
       QDRANT_PATH: /data/qdrant_data
     volumes: ["knowledge_data:/data"]
     ports: ["8003:8003"]
+    restart: unless-stopped
 
   chat_service:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: chat_service } }
@@ -63,6 +66,7 @@ services:
       <<: *svc-env
       CHAT_MODEL: ${CHAT_MODEL:-gemini-2.5-flash}
     ports: ["8004:8004"]
+    restart: unless-stopped
 
   ticket_service:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: ticket_service } }
@@ -72,6 +76,7 @@ services:
       TICKETS_DB_PATH: /data/tickets.json
     volumes: ["ticket_data:/data"]
     ports: ["8005:8005"]
+    restart: unless-stopped
 
   analytics_service:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: analytics_service } }
@@ -85,6 +90,7 @@ services:
       - analytics_data:/data
       - ./transcripts:/transcripts:ro
     ports: ["8006:8006"]
+    restart: unless-stopped
 
   email_processor:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: email_processor } }
@@ -93,6 +99,7 @@ services:
       <<: *svc-env
       EMAIL_POLL_INTERVAL: ${EMAIL_POLL_INTERVAL:-10}
     depends_on: [user_service, email_service]
+    restart: unless-stopped
 
   voice_agent:
     build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: voice_agent } }
@@ -108,15 +115,25 @@ services:
       # Scrive le trascrizioni nella stessa cartella host che user_service e
       # analytics_service leggono (pagine Chiamate e Analisi).
       - ./transcripts:/app/transcripts
-    # Worker di lunga durata: si riavvia da solo dopo un errore transiente
-    # (es. blip di rete verso LiveKit Cloud), riagganciando la registrazione.
+    # Resilienza su tre livelli:
+    #  1. dns: resolver pubblici stabili (il resolver ereditato da WSL fallisce a
+    #     intermittenza e faceva cadere la connessione a LiveKit Cloud);
+    #  2. max_retry altissimo in agent.py: il worker non smette mai di riconnettersi
+    #     (di default rinunciava dopo ~2,5 minuti di rete assente e restava zombie);
+    #  3. healthcheck: interroga l'endpoint di stato del worker (200/503) e, dopo
+    #     ~10 minuti di fallimenti consecutivi, riavvia il container in modo pulito
+    #     (SIGTERM a PID 1) — copre anche i casi che il retry non vede (event loop
+    #     bloccato, processo di inference morto).
     restart: unless-stopped
-    # DNS pubblici stabili: il resolver ereditato da WSL fallisce a intermittenza
-    # ("No address associated with hostname") e faceva cadere la connessione a
-    # LiveKit Cloud, lasciando il worker vivo ma disconnesso (Sofia non entrava).
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    healthcheck:
+      test: ["CMD", "python", "/app/services/voice_agent/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3        # "unhealthy" visibile in `docker compose ps` dopo ~90s
+      start_period: 60s # grazia all'avvio: registrazione entro pochi secondi
     depends_on: [user_service, knowledge_service, ticket_service]
 
   frontend:
@@ -134,6 +151,7 @@ services:
       - chat_service
       - ticket_service
       - analytics_service
+    restart: unless-stopped
 
 volumes:
   user_data:

@@ -215,6 +215,14 @@ class UserUpdate(BaseModel):
     status: Optional[Literal["active", "locked", "suspended"]] = None
 
 
+# ── Health ────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
+def health() -> dict:
+    """Liveness: il processo è vivo. Uniforma user_service agli altri servizi."""
+    return {"status": "ok"}
+
+
 # ── Endpoints utenti ──────────────────────────────────────────────────────────
 
 @app.get("/users", response_model=List[User])

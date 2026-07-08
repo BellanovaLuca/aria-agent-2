@@ -7,12 +7,15 @@ ARG SERVICE
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
+# Prima le sole dipendenze: modificare il codice non invalida la cache del
+# layer di pip install (rebuild in secondi invece che in minuti).
+COPY services/${SERVICE}/requirements.txt ./services/${SERVICE}/requirements.txt
+RUN pip install -r services/${SERVICE}/requirements.txt
+
 # .env.example fa da marker per il finder della repo root nei servizi.
 COPY .env.example ./
 COPY shared ./shared
 COPY services/${SERVICE}/ ./services/${SERVICE}/
-
-RUN pip install -r services/${SERVICE}/requirements.txt
 
 WORKDIR /app/services/${SERVICE}
 # La porta e l'eventuale comando alternativo (es. email_processor) sono

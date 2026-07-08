@@ -261,4 +261,20 @@ if __name__ == "__main__":
     # num_idle_processes=1: mantiene sempre un processo figlio pre-avviato e pronto.
     # Senza di questo, ogni chiamata parte "fredda" e rischia il timeout di connessione
     # a LiveKit Cloud prima che il processo riesca ad unirsi alla room.
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, agent_name=DISPATCH_NAME, num_idle_processes=1))
+    cli.run_app(
+        WorkerOptions(
+            entrypoint_fnc=entrypoint,
+            agent_name=DISPATCH_NAME,
+            num_idle_processes=1,
+            # L'SDK di default rinuncia dopo 16 tentativi CONSECUTIVI di
+            # riconnessione (~2,5 minuti di rete assente: sleep del portatile,
+            # resume di WSL, riavvio del router) e resta vivo ma scollegato per
+            # sempre. Un worker di lunga durata non deve mai arrendersi: con la
+            # rete di nuovo su, si riconnette da solo entro ~10 secondi.
+            max_retry=2**31,
+            # Porta fissa dell'HTTP server di stato del worker: GET / risponde
+            # 200 se connesso a LiveKit, 503 altrimenti. È il contratto usato
+            # dall'healthcheck Docker (healthcheck.py).
+            port=8081,
+        )
+    )

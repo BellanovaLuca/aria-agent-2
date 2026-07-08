@@ -76,6 +76,14 @@ def _email_to_dict(body: EmailCreate, processed: bool = False) -> dict:
     }
 
 
+# ── Health ────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
+def health() -> dict:
+    """Liveness: il processo è vivo. Uniforma email_service agli altri servizi."""
+    return {"status": "ok"}
+
+
 # ── Endpoints inbox ───────────────────────────────────────────────────────────
 
 @app.get("/inbox", response_model=List[Email])
