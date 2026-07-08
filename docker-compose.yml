@@ -21,6 +21,9 @@ x-svc-env: &svc-env
   AGENT_EMAIL: ${AGENT_EMAIL:-agent@aria.local}
   # Nome dell'agente LiveKit per il dispatch esplicito (worker + /token + SIP).
   LIVEKIT_AGENT_NAME: ${LIVEKIT_AGENT_NAME:-aria-support}
+  # Fuso orario di tutti i servizi: log e timestamp naive in ora locale, non UTC.
+  # I timestamp salvati restano comunque in UTC (usano now(timezone.utc)).
+  TZ: ${TZ:-Europe/Rome}
 
 services:
   user_service:
@@ -101,9 +104,6 @@ services:
       LIVEKIT_URL: ${LIVEKIT_URL:-}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
-      # Fuso orario per i timestamp delle trascrizioni (nome file + intestazioni):
-      # il container gira in UTC, ma i file devono riportare l'ora locale.
-      TZ: ${TZ:-Europe/Rome}
     volumes:
       # Scrive le trascrizioni nella stessa cartella host che user_service e
       # analytics_service leggono (pagine Chiamate e Analisi).
@@ -111,6 +111,12 @@ services:
     # Worker di lunga durata: si riavvia da solo dopo un errore transiente
     # (es. blip di rete verso LiveKit Cloud), riagganciando la registrazione.
     restart: unless-stopped
+    # DNS pubblici stabili: il resolver ereditato da WSL fallisce a intermittenza
+    # ("No address associated with hostname") e faceva cadere la connessione a
+    # LiveKit Cloud, lasciando il worker vivo ma disconnesso (Sofia non entrava).
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     depends_on: [user_service, knowledge_service, ticket_service]
 
   frontend:
@@ -119,6 +125,7 @@ services:
       dockerfile: Dockerfile
     environment:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?definisci INTERNAL_API_KEY nel .env}
+      TZ: ${TZ:-Europe/Rome}
     ports: ["5175:80"]
     depends_on:
       - user_service

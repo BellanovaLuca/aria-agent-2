@@ -9,6 +9,8 @@ COPY . .
 RUN npm run build
 
 FROM nginx:1.27-alpine
+# tzdata: permette a TZ (es. Europe/Rome) di risolvere il fuso nei log di nginx.
+RUN apk add --no-cache tzdata
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 # Solo INTERNAL_API_KEY viene sostituita nel template: le variabili nginx
